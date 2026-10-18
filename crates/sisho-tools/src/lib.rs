@@ -12,7 +12,7 @@
 //! `OK: 0 file(s)`). So every tool here runs every time.
 //!
 //! Only the steps that run a tool are here. `sisho`'s own checks and repairs
-//! (`export`, `refactor --check`) are not tool steps; the program puts them in
+//! (`export --check`, `export`) are not tool steps; the program puts them in
 //! the plan beside these. `fix` is split in two around `export` for that
 //! reason.
 

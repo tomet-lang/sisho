@@ -24,7 +24,6 @@ pub fn check(args: &RunArgs) -> Result<ExitCode> {
     let path = args.path.as_path();
     let mut jobs: Vec<Job<'_>> = versions.iter().chain(&steps).map(Job::step).collect();
     jobs.push(Job::new(|| steps::export_check(path)));
-    jobs.push(Job::new(|| steps::refactor_check(path)));
     let mut outcomes = run_parallel(jobs);
     let step_outcomes = outcomes.split_off(versions.len());
     let versions = tool_versions(&outcomes);
@@ -42,8 +41,8 @@ pub fn check(args: &RunArgs) -> Result<ExitCode> {
     Ok(exit_code(&Report::new(step_outcomes)))
 }
 
-/// `sisho fix`: one step after another, each reported as it ends. Regenerate, export,
-/// then format; `refactor -i` is not here, because it drops comments.
+/// `sisho fix`: one step after another, each reported as it ends. Regenerate,
+/// export, then format.
 pub fn fix(args: &RunArgs) -> Result<ExitCode> {
     let versions = version_steps();
     let outcomes = run_parallel(versions.iter().map(Job::step).collect());

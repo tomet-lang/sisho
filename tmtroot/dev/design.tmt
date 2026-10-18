@@ -39,10 +39,12 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 
 横断の動詞は 2 つだけ。複数のツールが持つ動詞でないと、まとめて呼ぶ意味がないため。
 
-- `sisho check`: 何も書き換えずに全体を検証する。tomet の `check` / `format --check`、twrit の `check`、sisho 自前の `export --check` / `refactor --check` を含む(2026-10-18 に確定)。当初の案には `check-links` もあったが、入れない(下記)。
+- `sisho check`: 何も書き換えずに全体を検証する。tomet の `check` / `format --check`、twrit の `check`、sisho 自前の `export --check` を含む(2026-10-18 に確定)。当初の案には `check-links` と `refactor --check` もあったが、入れない(下記)。
 - `sisho fix`: 直せるものを直す。twrit の `check --fix`、sisho 自前の `export`、tomet の `format -i` を、この順で含む。生成物を先に作り直し、そこから出力を書き出し、最後に整形する。当初の案には `refactor -i` もあったが、入れない(下記)。
 - `check-links` は `check` に入れず、単独のコマンドのままにする。今のどのゲート(各レポの `docs-check`)にも入っておらず、入れると tomet が 69 件、twrit が 2 件の壊れたリンクで今日から赤くなる(2026-10-18 に実際に走らせて確認。実在しないディレクトリへの参照で、古い記述として本物)。片付けてから `check` に加える。
-- `refactor -i` は `fix` に入れない。構文木から文書を印刷し直すのでコメントが落ちる。日常的に叩く `fix` に入れると、気づかないうちにコメントが消える。`check` の `refactor --check` が落ちたときは、出力が `sisho refactor`(ドライラン)と `sisho refactor -i` を案内する。
+- `refactor -i` は `fix` に入れない。構文木から文書を印刷し直すのでコメントが落ちる。日常的に叩く `fix` に入れると、気づかないうちにコメントが消える。
+- `refactor` は、sisho には置かない(2026-10-18 に利用者が決めた)。言語が書き方を変えたときの移行の規則は、言語の版と一緒に変わるので、tomet に残る。`@meta{type: ..}` を `@kind(..)` に直す移行は、cargo にとっての `cargo fix --edition` に当たり、規則は rustc 側が持つ。そもそも要るのかも未定で、まずは tomet だけにする。`sisho tomet refactor ...` で届く。当初は sisho にも `refactor` と `check` の中の `refactor --check` を実装したが、この決定で外した。
+- `new` も sisho には置かない(同じ日に決めた)。blueprint の具体化は言語の式の評価を使うので tomet に置く。`sisho tomet new ...` で届く。これも一度 sisho に実装して、外した。
 - 自前のステップはプロセス内で動き、ツールのステップと同じ `Outcome` を返す。コマンドと同じ表示コードを、標準出力の代わりにバッファに向けて使うので、`check` の報告では見分けがつかない。
 - 失敗の扱いは tomet の `check` を踏襲する。1 つのツールが失敗しても残りを最後まで走らせ、最後に 1 つでも失敗があれば非ゼロで終了する。出力はツールごとにまとめ、どれが落ちたか分かるようにする。
 
@@ -67,11 +69,13 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 
 ===[ tomet から移すコマンド ]
 
-- 移す 6 つ: `new` / `export` / `check-links` / `refactor` / `serve` / `tui`。vault・workspace 単位の操作。
+- 振り分けの基準(2026-10-18、rustc と cargo の関係から): 文書(と明示された入力)だけで意味が決まるものは tomet(rustc / rustfmt に当たる)、vault の宣言・走査・キャッシュ・画面といったエコシステムの話は sisho(cargo に当たる)。cargo が依存解決や workspace を扱い、rustc は言語を扱うのと同じ。
+- 移す 4 つ: `export` / `check-links` / `serve` / `tui`。当初は `new` と `refactor` も移す 6 つだったが、利用者が tomet に残すと決めた(上の `refactor` と `new` の項)。
 - 理由の一つは依存。tomet の CLI は axum・tokio・tomet-tui まで引いていて、言語コアの CLI としては重い。
 - 最終形は tomet から撤去して sisho に移す。互換 alias は置かず、一度に移す。tomet は crates.io に公開せず、利用者はこのエコシステム内に限られるので、呼び出し側を一度に直せば済む。
-- tomet に残す: `check` / `ast` / `format` / `stats` / `roundtrip` / `cli-docs`。言語そのものに属する操作。
-- コードの置き場(2026-10-18 に合意)。コマンドは bin crate(`apps/cli/src/commands/*.rs`)の中にあり、テストも同居しているので、lib としては依存できない。引数の解釈・走査・出力という糊の部分(`new` 約 150 行、`export` 約 470 行、`check_links` 約 160 行、`refactor` 約 190 行、`serve` 約 60 行、共通の `util` 約 100 行)をテストごと sisho に移す。実際の処理を持つ lib(`tomet-links`・`tomet-html`・`tomet-semantics`・`tomet-workspace` など)は tomet に残る。
+- tomet に残す: `check` / `ast` / `format` / `stats` / `roundtrip` / `cli-docs`、単一文書の変換 6 つ、`new`、`refactor`。言語そのものに属する操作。
+- sisho は tomet の crate を git 依存で取り込み続ける。`tui` を sisho に置くので(利用者は tomet 側で保守したくない)、バイナリの約束だけに依存する形は取れない。それは悪いことではなく、cargo が workspace や依存というエコシステムを知っているのと同じで、sisho は vault や `@config` といった tomet 固有の知識を持つ側にいる。代償は、二重固定(`Cargo.lock` と `flake.lock`)と、tomet の内部 API への追随。
+- コードの置き場(2026-10-18 に合意)。コマンドは bin crate(`apps/cli/src/commands/*.rs`)の中にあり、テストも同居しているので、lib としては依存できない。引数の解釈・走査・出力という糊の部分(`export` 約 470 行、`check_links` 約 160 行、`serve` 約 60 行、共通の `util` 約 100 行)をテストごと sisho に移す。(`new` と `refactor` も一度は移したが、tomet に残すと決めたので外した。)実際の処理を持つ lib(`tomet-links`・`tomet-html`・`tomet-semantics`・`tomet-workspace` など)は tomet に残る。
 - `tui` も sisho に移す。`apps/tui`(`tomet-tui`)は tomet 固有の作業台だが、自前のものとして sisho が持つ。tomet 側の crate は、sisho 側ができたあとの撤去で消える。
 - 順序: まず sisho にコピーして動かし、tomet 側の撤去は最後に一度に行う。間は両方にコードがあるが、tomet は動き続ける。`serve` は `convert` の描画の糊(`render_file`)に依存するので、`convert` のあとに作る。`sisho-serve` は同じ層の `sisho-vault` に依存してよい。
 
@@ -99,7 +103,7 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 twrit の AGENTS.md と tomet の CLI のコードから見えた依存。
 
 - twrit の `just docs` が `tomet export .` を呼んでいる。
-- tomet の writ のガードが `tomet export --check` と `tomet refactor --check` を指している(`generated-md-not-edited` と `kind-not-meta-type`)。
+- tomet の writ のガードが `tomet export --check` を指している(`generated-md-not-edited`)。`tomet refactor --check --meta-kind` を指す `kind-not-meta-type` は、`refactor` が tomet に残るので、そのまま使える。
 - tomet の flake は twrit を dev-shell のツールとして取り込み、twrit の flake も tomet を取り込んでいる。sisho が tomet と twrit の両方を固定する側に入ると、この相互参照の輪に sisho も加わる。
 - `tomet-book` と `cli-docs` の出力も追従が要る。
 - 各リポジトリの writ の `guard: { runs: "just docs-check" }` は、`{ runs: "sisho check" }` に置き換えられる。

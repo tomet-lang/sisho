@@ -5,7 +5,7 @@
 //! serves the command (standard output and error) and a step of `check` or
 //! `fix` (buffers, kept in the step's outcome). A command that could not do
 //! what was asked prints `sisho: <reason>` and exits 1, as `tomet` does, so a
-//! script that moves from `tomet new` to `sisho new` keeps working.
+//! script that moves from `tomet export` to `sisho export` keeps working.
 
 use std::io::{self, Write};
 use std::process::ExitCode;
@@ -14,13 +14,9 @@ use anyhow::Result;
 use sisho_vault::convert::{self, Converted, Direction, Plan, Source, Target};
 use sisho_vault::export::{self, Action};
 use sisho_vault::links;
-use sisho_vault::new::{Context, Document};
-use sisho_vault::refactor::{self, Options};
 use sisho_vault::render::Html;
 
-use crate::cli::{
-    CheckLinksArgs, ConvertArgs, ExportArgs, NewArgs, RefactorArgs, ServeArgs, TuiArgs,
-};
+use crate::cli::{CheckLinksArgs, ConvertArgs, ExportArgs, ServeArgs, TuiArgs};
 use crate::output::{BROKEN_PIPE, is_broken_pipe};
 
 /// The exit code of a vault command that failed.
@@ -29,22 +25,12 @@ const FAILED: u8 = 1;
 /// Where a command writes: its standard output and its standard error.
 pub type Sink<'a> = &'a mut dyn Write;
 
-pub fn new(args: &NewArgs) -> ExitCode {
-    finish(with_standard_streams(|out, err| run_new(args, out, err)))
-}
-
 pub fn check_links(args: &CheckLinksArgs) -> ExitCode {
     match with_standard_streams(|out, err| run_check_links(args, out, err)) {
         Ok(true) => ExitCode::from(FAILED),
         Ok(false) => ExitCode::SUCCESS,
         Err(error) => failed(&error),
     }
-}
-
-pub fn refactor(args: &RefactorArgs) -> ExitCode {
-    finish(with_standard_streams(|out, err| {
-        run_refactor(args, out, err)
-    }))
 }
 
 pub fn export(args: &ExportArgs) -> ExitCode {
@@ -71,66 +57,6 @@ fn failed(error: &anyhow::Error) -> ExitCode {
     }
     let _ = writeln!(io::stderr(), "sisho: {error:#}");
     ExitCode::from(FAILED)
-}
-
-pub fn run_new(args: &NewArgs, out: Sink<'_>, err: Sink<'_>) -> Result<()> {
-    let context = Context::discover(&std::env::current_dir()?);
-    for problem in context.warnings() {
-        writeln!(err, "warning: {problem}")?;
-    }
-
-    if args.list {
-        let blueprints = context.blueprints();
-        if blueprints.is_empty() {
-            writeln!(
-                out,
-                "This vault declares no blueprints. Add their paths to `blueprints` in the config."
-            )?;
-        } else {
-            writeln!(out, "Declared blueprints:")?;
-            for blueprint in blueprints {
-                writeln!(
-                    out,
-                    "  - {:<15} ({})",
-                    blueprint.name,
-                    blueprint.path.display()
-                )?;
-            }
-        }
-        return Ok(());
-    }
-
-    let created = context.create(&Document {
-        path: &args.path,
-        blueprint: args.blueprint.as_deref(),
-        force: args.force,
-        vars: &args.vars,
-    })?;
-    writeln!(out, "Created {}", created.path.display())?;
-
-    // The expressions with no value are in the new file as written. Said here
-    // in the form `check` uses, pointing at the blueprint line they came from.
-    for unfilled in &created.unfilled {
-        writeln!(
-            err,
-            "{}:{}: warning: {}",
-            created.blueprint.display(),
-            unfilled.line,
-            unfilled.message
-        )?;
-    }
-    if !created.unfilled.is_empty() {
-        writeln!(
-            err,
-            "{} left as written in {}",
-            match created.unfilled.len() {
-                1 => "1 expression".to_string(),
-                n => format!("{n} expressions"),
-            },
-            created.path.display()
-        )?;
-    }
-    Ok(())
 }
 
 /// Runs the check and writes its report. `Ok(true)` means there is something
@@ -202,114 +128,6 @@ fn links_json(report: &links::Report) -> String {
         "errors": errors,
     })
     .to_string()
-}
-
-/// `refactor --check` found documents that need changing -- a check that found
-/// something to do, as opposed to one that could not run. The message is the
-/// one `tomet refactor --check` gives; the type lets a step that wraps this
-/// command add a hint.
-#[derive(Debug)]
-pub struct NeedsRefactor(String);
-
-impl std::fmt::Display for NeedsRefactor {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-impl std::error::Error for NeedsRefactor {}
-
-pub fn run_refactor(args: &RefactorArgs, out: Sink<'_>, err: Sink<'_>) -> Result<()> {
-    let mut sweep = refactor::sweep(
-        &args.path,
-        Options {
-            url_macros: args.url_macros,
-            meta_kind: args.meta_kind,
-            force: args.force,
-        },
-    )?;
-    for file in &sweep.skipped {
-        writeln!(
-            err,
-            "skipped {}: excluded by the project config (workspace.ignore / \
-             workspace.unswept); pass --force to include it",
-            file.display()
-        )?;
-    }
-
-    // A file the sweep could not read or parse is not a file it checked.
-    // Saying so is the whole point: it is the likeliest one to still carry
-    // the spelling being migrated away from.
-    for unchecked in &sweep.unchecked {
-        writeln!(
-            err,
-            "Could not check {}: {}",
-            unchecked.path.display(),
-            unchecked.error
-        )?;
-    }
-
-    let total = sweep.files.len();
-    let changed = sweep.changed();
-
-    if args.check {
-        if sweep.is_clean() {
-            writeln!(out, "All {total} file(s) are up to date.")?;
-            return Ok(());
-        }
-        for file in &changed {
-            writeln!(
-                out,
-                "Needs refactor ({} change(s)): {}",
-                file.changes,
-                file.path.display()
-            )?;
-        }
-        let unchecked = sweep.unchecked.len();
-        if changed.is_empty() {
-            return Err(anyhow::anyhow!("{unchecked} file(s) could not be checked"));
-        }
-        return Err(NeedsRefactor(format!(
-            "{} of {total} file(s) need refactoring{}",
-            changed.len(),
-            if unchecked == 0 {
-                String::new()
-            } else {
-                format!(", and {unchecked} could not be checked")
-            }
-        ))
-        .into());
-    }
-
-    if args.in_place {
-        // Lossy: the documents are re-printed from the syntax tree, which
-        // carries no comments.
-        let saved = sweep.save()?;
-        writeln!(out, "Refactored {saved} of {total} file(s).")?;
-        return Ok(());
-    }
-
-    if args.path.is_file() {
-        if let Some(file) = sweep.files.first() {
-            write!(out, "{}", file.modified_src)?;
-        }
-    } else {
-        for file in &changed {
-            writeln!(
-                out,
-                "==> {} ({} changes) <==",
-                file.path.display(),
-                file.changes
-            )?;
-            write!(out, "{}", file.modified_src)?;
-        }
-        writeln!(
-            out,
-            "\nDry-run: {} of {total} file(s) would be modified.",
-            changed.len(),
-        )?;
-    }
-    Ok(())
 }
 
 pub fn run_export(args: &ExportArgs, out: Sink<'_>, err: Sink<'_>) -> Result<()> {

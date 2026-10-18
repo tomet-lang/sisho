@@ -12,9 +12,8 @@ fn step(tool: Tool, args: &[&str], path: &Path) -> Step {
 /// The tool steps of `sisho check`: verify `path` without writing anything.
 ///
 /// Read-only, so a caller may run them at the same time. Plan order is the
-/// order they are reported in. `sisho`'s own checks (`export --check`,
-/// `refactor --check`) follow them; they are not tool steps and live with the
-/// program.
+/// order they are reported in. `sisho`'s own check (`export --check`) follows
+/// them; it is not a tool step and lives with the program.
 pub fn check_steps(path: &Path) -> Vec<Step> {
     vec![
         step(Tool::Tomet, &["check"], path),

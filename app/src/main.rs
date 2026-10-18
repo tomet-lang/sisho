@@ -33,9 +33,7 @@ fn main() -> ExitCode {
     let result = match &cli.command {
         Command::Check(args) => verbs::check(args),
         Command::Fix(args) => verbs::fix(args),
-        Command::New(args) => Ok(vault::new(args)),
         Command::CheckLinks(args) => Ok(vault::check_links(args)),
-        Command::Refactor(args) => Ok(vault::refactor(args)),
         Command::Export(args) => Ok(vault::export(args)),
         Command::Serve(args) => Ok(vault::serve(args)),
         Command::Tui(args) => Ok(vault::tui(args)),

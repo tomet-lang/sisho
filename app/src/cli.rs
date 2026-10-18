@@ -31,13 +31,6 @@ pub enum Command {
     /// order, each reported as soon as it ends. One failing step does not
     /// stop the others. Run `sisho check` afterwards to confirm.
     Fix(RunArgs),
-    /// Make a new document from a blueprint the vault declares.
-    ///
-    /// The vault is the one whose config is found from the working directory
-    /// upward. Without `--blueprint`, the blueprint is named after the
-    /// directory the document goes in. `--list` shows the declared blueprints
-    /// instead of making a document.
-    New(NewArgs),
     /// Check every `@file`, `@dir`, `@embed` and `@link` in a document, or in
     /// every document under a directory, for a local target that does not
     /// exist.
@@ -47,15 +40,6 @@ pub enum Command {
     /// vault, so checking a large vault again does not parse what has not
     /// changed. Exits 1 if a link is broken or a document could not be read.
     CheckLinks(CheckLinksArgs),
-    /// Migrate documents off spellings the language has moved away from: URLs
-    /// that match a `@config` macro become `$macro(...)`, and `@meta{type: ..}`
-    /// becomes `@kind(..)`.
-    ///
-    /// By default it prints what would change and writes nothing. `--check`
-    /// exits 1 if any document needs changing, or could not be looked at.
-    /// `-i` writes the changes; that re-prints the documents from the syntax
-    /// tree, which carries no comments, so read the dry run first.
-    Refactor(RefactorArgs),
     /// Write documents out in the formats their `@config(export: ..)` asks
     /// for, or check that what was written is still what the source renders
     /// to.
@@ -116,34 +100,6 @@ pub struct RunArgs {
 }
 
 #[derive(Args)]
-pub struct NewArgs {
-    /// Path of the document to create (defaults to "document.tmt").
-    #[arg(default_value = "document.tmt")]
-    pub path: PathBuf,
-    /// Blueprint name, as the blueprint gives it in `@blueprint(...)` (e.g.
-    /// "daily-note", "rfc"). Resolved among the blueprints the vault declares
-    /// in `blueprints`, never searched for on disk.
-    #[arg(short, long)]
-    pub blueprint: Option<String>,
-    /// List the blueprints this vault declares instead of creating a file.
-    #[arg(short, long)]
-    pub list: bool,
-    /// Overwrite the target file if it already exists.
-    #[arg(short = 'f', long)]
-    pub force: bool,
-    /// Pass a custom variable as `key=value`. Can be given more than once.
-    #[arg(long = "var", value_parser = parse_key_val)]
-    pub vars: Vec<(String, String)>,
-}
-
-fn parse_key_val(s: &str) -> Result<(String, String), String> {
-    let pos = s
-        .find('=')
-        .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
-    Ok((s[..pos].to_string(), s[pos + 1..].to_string()))
-}
-
-#[derive(Args)]
 pub struct CheckLinksArgs {
     /// File or directory to check (defaults to ".").
     #[arg(default_value = ".")]
@@ -151,31 +107,6 @@ pub struct CheckLinksArgs {
     /// Print the report as JSON instead of human-readable text.
     #[arg(long)]
     pub json: bool,
-}
-
-#[derive(Args)]
-pub struct RefactorArgs {
-    /// File or directory to refactor (defaults to ".").
-    #[arg(default_value = ".")]
-    pub path: PathBuf,
-    /// Write the changed documents in place.
-    #[arg(short = 'i', long, alias = "write")]
-    pub in_place: bool,
-    /// Only rewrite URLs that match macros.
-    #[arg(long)]
-    pub url_macros: bool,
-    /// Only promote `@meta` type to `@kind`.
-    #[arg(long)]
-    pub meta_kind: bool,
-    /// Check without modifying files; exits 1 if changes are needed.
-    #[arg(long, conflicts_with = "in_place")]
-    pub check: bool,
-    /// Refactor files and directories the project config excludes
-    /// (`workspace.ignore`, `workspace.unswept`) as well. Without it, a file
-    /// named explicitly that the config excludes is skipped with a warning, as
-    /// it would be in a directory sweep.
-    #[arg(long)]
-    pub force: bool,
 }
 
 #[derive(Args)]

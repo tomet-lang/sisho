@@ -84,7 +84,7 @@ fn check_passes_when_every_tool_passes() {
     assert!(text.contains("✓ tomet check"), "{text}");
     assert!(text.contains("✓ tomet format --check"), "{text}");
     assert!(text.contains("✓ twrit check"), "{text}");
-    assert!(text.contains("all 5 steps passed"), "{text}");
+    assert!(text.contains("all 4 steps passed"), "{text}");
 }
 
 #[test]
@@ -99,7 +99,7 @@ fn a_failing_step_fails_the_run_and_shows_why_but_stops_nothing() {
     // The others still ran, and still passed.
     assert!(text.contains("✓ tomet check"), "{text}");
     assert!(text.contains("✓ twrit check"), "{text}");
-    assert!(text.contains("1 of 5 steps did not pass"), "{text}");
+    assert!(text.contains("1 of 4 steps did not pass"), "{text}");
 }
 
 #[test]
@@ -153,7 +153,6 @@ fn json_reports_every_step_and_whether_the_run_passed() {
             "tomet format --check",
             "twrit check",
             "sisho export --check",
-            "sisho refactor --check",
         ]
     );
     assert_eq!(steps[0]["status"], "passed");

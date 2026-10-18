@@ -1,6 +1,6 @@
-//! The steps `sisho` does itself inside `check` and `fix`: `export` and
-//! `refactor --check`. The tool steps are fake programs that always pass, so
-//! what is under test is `sisho`'s own part and the order it is run in.
+//! The steps `sisho` does itself inside `check` and `fix`: `export --check`
+//! and `export`. The tool steps are fake programs that always pass, so what is
+//! under test is `sisho`'s own part and the order it is run in.
 #![cfg(unix)]
 
 use std::fs;
@@ -83,7 +83,6 @@ fn check_runs_the_tools_then_its_own_checks_and_all_pass_on_a_clean_project() {
         "✓ tomet format --check",
         "✓ twrit check",
         "✓ sisho export --check",
-        "✓ sisho refactor --check",
     ];
     let mut at = 0;
     for step in order {
@@ -92,7 +91,7 @@ fn check_runs_the_tools_then_its_own_checks_and_all_pass_on_a_clean_project() {
             .unwrap_or_else(|| panic!("{step} out of order:\n{text}"));
         at += found + step.len();
     }
-    assert!(text.contains("all 5 steps passed"), "{text}");
+    assert!(text.contains("all 4 steps passed"), "{text}");
 }
 
 #[test]
@@ -105,7 +104,8 @@ fn a_stale_export_fails_the_check_and_names_the_file() {
     assert_eq!(code(&output), 1, "{text}");
     assert!(text.contains("✗ sisho export --check"), "{text}");
     assert!(text.contains("Stale export:"), "{text}");
-    assert!(text.contains("✓ sisho refactor --check"), "{text}");
+    // The tool steps are not affected by it.
+    assert!(text.contains("✓ tomet check"), "{text}");
     assert!(
         !project.0.join("out/readme.md").exists(),
         "check writes nothing"
@@ -113,34 +113,15 @@ fn a_stale_export_fails_the_check_and_names_the_file() {
 }
 
 #[test]
-fn a_document_in_the_old_spelling_fails_the_check_and_points_at_the_commands() {
-    let project = Project::new("old");
-    project.write("old.tmt", OLD_SPELLING);
-
-    let output = project.sisho(&["check"]);
-    let text = stdout(&output);
-    assert_eq!(code(&output), 1, "{text}");
-    assert!(text.contains("✗ sisho refactor --check"), "{text}");
-    assert!(text.contains("Needs refactor (1 change(s)):"), "{text}");
-    assert!(
-        text.contains("hint: `sisho refactor` shows what would change"),
-        "{text}"
-    );
-    assert!(text.contains("drops comments"), "{text}");
-    assert_eq!(project.read("old.tmt"), OLD_SPELLING);
-}
-
-#[test]
-fn a_document_that_cannot_be_read_fails_both_of_sishos_checks() {
+fn a_document_that_cannot_be_read_fails_the_export_check() {
     let project = Project::new("unreadable");
     project.write("broken.tmt", "=[ unterminated\n");
 
     let output = project.sisho(&["check"]);
     let text = stdout(&output);
     assert_eq!(code(&output), 1, "{text}");
-    // Each check says it did not look at the document, rather than passing.
+    // The check says it did not look at the document, rather than passing.
     assert!(text.contains("✗ sisho export --check"), "{text}");
-    assert!(text.contains("✗ sisho refactor --check"), "{text}");
     assert!(text.contains("could not be checked"), "{text}");
 }
 
@@ -154,7 +135,7 @@ fn json_names_the_own_steps_with_a_command_line() {
     assert_eq!(steps[3]["name"], "sisho export --check");
     assert_eq!(steps[3]["command"], "sisho export --check .");
     assert_eq!(steps[3]["status"], "passed");
-    assert_eq!(steps[4]["name"], "sisho refactor --check");
+    assert_eq!(steps.len(), 4);
 }
 
 #[test]
@@ -174,15 +155,17 @@ fn fix_exports_between_the_tools_and_then_check_passes() {
     assert_eq!(code(&project.sisho(&["check"])), 0);
 }
 
-/// `refactor -i` re-prints a document from its syntax tree, which has no
-/// comments, so `fix` leaves it to be asked for by name.
+/// Migrating a document off an old spelling re-prints it from its syntax
+/// tree, which has no comments. That is the language's own migration, in
+/// `tomet`; neither `check` nor `fix` touches a document for it.
 #[test]
-fn fix_does_not_rewrite_documents_in_the_old_spelling() {
-    let project = Project::new("fix-no-refactor");
+fn neither_check_nor_fix_rewrites_documents_in_the_old_spelling() {
+    let project = Project::new("old-spelling");
     project.write("old.tmt", OLD_SPELLING);
 
-    let output = project.sisho(&["fix"]);
-    assert_eq!(code(&output), 0, "{}", stdout(&output));
-    assert!(!stdout(&output).contains("refactor"), "{}", stdout(&output));
+    let fixed = project.sisho(&["fix"]);
+    assert_eq!(code(&fixed), 0, "{}", stdout(&fixed));
+    let checked = project.sisho(&["check"]);
+    assert_eq!(code(&checked), 0, "{}", stdout(&checked));
     assert_eq!(project.read("old.tmt"), OLD_SPELLING);
 }

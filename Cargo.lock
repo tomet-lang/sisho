@@ -1268,7 +1268,6 @@ dependencies = [
  "tomet-printer",
  "tomet-semantics",
  "tomet-typst",
- "tomet-workspace",
 ]
 
 [[package]]

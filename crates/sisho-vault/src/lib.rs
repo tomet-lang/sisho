@@ -1,8 +1,12 @@
 //! Layer 1: the vault and workspace commands that `tomet` hands over.
 //!
-//! `new`, `export`, `check-links`, `refactor` and `convert`. Unlike
-//! `sisho-tools`, these use the `tomet` crates directly, through git
-//! dependencies.
+//! `export`, `check-links` and `convert`. Unlike `sisho-tools`, these use the
+//! `tomet` crates directly, through git dependencies: `sisho` is the part of
+//! the ecosystem that knows what a vault is, as `cargo` knows what a
+//! workspace is.
+//!
+//! `new` and `refactor` stay in `tomet`, where the language's own rules live;
+//! `sisho tomet new ...` reaches them.
 //!
 //! Each command is a module that does the work and returns what happened as
 //! data. Printing is the program's: this crate writes nothing to the terminal,
@@ -14,6 +18,4 @@ pub mod convert;
 pub mod diagnostic;
 pub mod export;
 pub mod links;
-pub mod new;
-pub mod refactor;
 pub mod render;
