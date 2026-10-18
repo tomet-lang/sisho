@@ -1,5 +1,8 @@
 mod cli;
+mod output;
 mod report;
+mod steps;
+mod vault;
 mod verbs;
 
 use std::process::ExitCode;
@@ -30,10 +33,15 @@ fn main() -> ExitCode {
     let result = match &cli.command {
         Command::Check(args) => verbs::check(args),
         Command::Fix(args) => verbs::fix(args),
+        Command::New(args) => Ok(vault::new(args)),
+        Command::CheckLinks(args) => Ok(vault::check_links(args)),
+        Command::Refactor(args) => Ok(vault::refactor(args)),
+        Command::Export(args) => Ok(vault::export(args)),
         Command::Tool(words) => verbs::tool(words),
     };
     match result {
         Ok(code) => code,
+        Err(error) if output::is_broken_pipe(&error) => ExitCode::from(output::BROKEN_PIPE),
         Err(error) => {
             eprintln!("sisho: {error:#}");
             ExitCode::from(OWN_ERROR)

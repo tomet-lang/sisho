@@ -9,10 +9,12 @@ fn step(tool: Tool, args: &[&str], path: &Path) -> Step {
     Step::new(name, tool.name()).args(args).arg(path)
 }
 
-/// The steps of `sisho check`: verify `path` without writing anything.
+/// The tool steps of `sisho check`: verify `path` without writing anything.
 ///
 /// Read-only, so a caller may run them at the same time. Plan order is the
-/// order they are reported in.
+/// order they are reported in. `sisho`'s own checks (`export --check`,
+/// `refactor --check`) follow them; they are not tool steps and live with the
+/// program.
 pub fn check_steps(path: &Path) -> Vec<Step> {
     vec![
         step(Tool::Tomet, &["check"], path),
@@ -21,15 +23,19 @@ pub fn check_steps(path: &Path) -> Vec<Step> {
     ]
 }
 
-/// The steps of `sisho fix`: repair what the tools can repair in `path`.
+/// The tool steps of `sisho fix` that come before `sisho export`: regenerate.
 ///
-/// These write files, so a caller runs them one after another, in this
-/// order. The order follows `twrit`'s own `just docs`: regenerate first
-/// (`twrit check --fix` rewrites generated API docs), format last, so the
-/// formatter sees what the generators produced.
-pub fn fix_steps(path: &Path) -> Vec<Step> {
-    vec![
-        step(Tool::Twrit, &["check", "--fix"], path),
-        step(Tool::Tomet, &["format", "-i"], path),
-    ]
+/// `twrit check --fix` rewrites generated API documents. They have to be
+/// right before `sisho export` renders documents from them, and before the
+/// formatter sees them.
+pub fn fix_generate_steps(path: &Path) -> Vec<Step> {
+    vec![step(Tool::Twrit, &["check", "--fix"], path)]
+}
+
+/// The tool steps of `sisho fix` that come after `sisho export`: format.
+///
+/// Last, so the formatter sees what the generators and the export produced.
+/// The order follows `twrit`'s own `just docs`.
+pub fn fix_format_steps(path: &Path) -> Vec<Step> {
+    vec![step(Tool::Tomet, &["format", "-i"], path)]
 }

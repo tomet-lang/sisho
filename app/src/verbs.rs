@@ -6,18 +6,25 @@ use std::process::ExitCode;
 
 use anyhow::{Result, bail};
 use sisho_run::{Job, Outcome, Report, Status, Step, run_parallel};
-use sisho_tools::{Tool, check_steps, fix_steps};
+use sisho_tools::{Tool, check_steps, fix_format_steps, fix_generate_steps};
 
 use crate::USAGE_ERROR;
 use crate::cli::RunArgs;
 use crate::report::{self, ToolVersion};
+use crate::steps;
 
-/// `sisho check`: every step at the same time, reported in plan order.
+/// `sisho check`: every step at the same time, reported in plan order. The
+/// tool steps come first, then `sisho`'s own checks.
 pub fn check(args: &RunArgs) -> Result<ExitCode> {
     let versions = version_steps();
     let steps = check_steps(&args.path);
 
-    let jobs = versions.iter().chain(&steps).map(Job::step).collect();
+    // The tool steps, then the checks `sisho` does itself; all at the same
+    // time, since none of them writes.
+    let path = args.path.as_path();
+    let mut jobs: Vec<Job<'_>> = versions.iter().chain(&steps).map(Job::step).collect();
+    jobs.push(Job::new(|| steps::export_check(path)));
+    jobs.push(Job::new(|| steps::refactor_check(path)));
     let mut outcomes = run_parallel(jobs);
     let step_outcomes = outcomes.split_off(versions.len());
     let versions = tool_versions(&outcomes);
@@ -35,26 +42,36 @@ pub fn check(args: &RunArgs) -> Result<ExitCode> {
     Ok(exit_code(&Report::new(step_outcomes)))
 }
 
-/// `sisho fix`: one step after another, each reported as it ends.
+/// `sisho fix`: one step after another, each reported as it ends. Regenerate, export,
+/// then format; `refactor -i` is not here, because it drops comments.
 pub fn fix(args: &RunArgs) -> Result<ExitCode> {
     let versions = version_steps();
     let outcomes = run_parallel(versions.iter().map(Job::step).collect());
     let versions = tool_versions(&outcomes);
 
-    let steps = fix_steps(&args.path);
     let mut out = io::stdout().lock();
     if !args.json {
         write!(out, "{}", report::header("fix", &args.path, &versions))?;
     }
 
+    // One after another, because these write. Regenerate first, then render
+    // the exports from what was regenerated, then format what came out.
+    let path = args.path.as_path();
     let mut step_outcomes = Vec::new();
-    for step in &steps {
-        let outcome = step.run();
+    let mut record = |outcome: Outcome, out: &mut io::StdoutLock<'_>| -> Result<()> {
         if !args.json {
             write!(out, "{}", report::outcome(&outcome, args.verbose))?;
             out.flush()?;
         }
         step_outcomes.push(outcome);
+        Ok(())
+    };
+    for step in fix_generate_steps(path) {
+        record(step.run(), &mut out)?;
+    }
+    record(steps::export_write(path), &mut out)?;
+    for step in fix_format_steps(path) {
+        record(step.run(), &mut out)?;
     }
 
     if args.json {

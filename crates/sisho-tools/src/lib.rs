@@ -11,9 +11,10 @@
 //! (`twrit` prints `no .writ.tmt found under .`, `tomet` prints
 //! `OK: 0 file(s)`). So every tool here runs every time.
 //!
-//! Only commands the tools still own are listed. `export`, `check-links` and
-//! `refactor` join the plans as in-process steps once they have moved from
-//! `tomet` into `sisho-vault`.
+//! Only the steps that run a tool are here. `sisho`'s own checks and repairs
+//! (`export`, `refactor --check`) are not tool steps; the program puts them in
+//! the plan beside these. `fix` is split in two around `export` for that
+//! reason.
 
 mod plan;
 mod tool;
@@ -21,5 +22,5 @@ mod tool;
 #[cfg(test)]
 mod tests;
 
-pub use plan::{check_steps, fix_steps};
+pub use plan::{check_steps, fix_format_steps, fix_generate_steps};
 pub use tool::Tool;

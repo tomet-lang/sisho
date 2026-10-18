@@ -51,6 +51,7 @@ impl Sandbox {
     fn sisho(&self, args: &[&str], fail: &str) -> Output {
         Command::new(env!("CARGO_BIN_EXE_sisho"))
             .args(args)
+            .current_dir(&self.dir)
             .env_clear()
             .env("PATH", &self.dir)
             .env("FAKE_FAIL", fail)
@@ -83,7 +84,7 @@ fn check_passes_when_every_tool_passes() {
     assert!(text.contains("✓ tomet check"), "{text}");
     assert!(text.contains("✓ tomet format --check"), "{text}");
     assert!(text.contains("✓ twrit check"), "{text}");
-    assert!(text.contains("all 3 steps passed"), "{text}");
+    assert!(text.contains("all 5 steps passed"), "{text}");
 }
 
 #[test]
@@ -98,7 +99,7 @@ fn a_failing_step_fails_the_run_and_shows_why_but_stops_nothing() {
     // The others still ran, and still passed.
     assert!(text.contains("✓ tomet check"), "{text}");
     assert!(text.contains("✓ twrit check"), "{text}");
-    assert!(text.contains("1 of 3 steps did not pass"), "{text}");
+    assert!(text.contains("1 of 5 steps did not pass"), "{text}");
 }
 
 #[test]
@@ -147,7 +148,13 @@ fn json_reports_every_step_and_whether_the_run_passed() {
     let names: Vec<_> = steps.iter().map(|s| s["name"].as_str().unwrap()).collect();
     assert_eq!(
         names,
-        ["tomet check", "tomet format --check", "twrit check"]
+        [
+            "tomet check",
+            "tomet format --check",
+            "twrit check",
+            "sisho export --check",
+            "sisho refactor --check",
+        ]
     );
     assert_eq!(steps[0]["status"], "passed");
     assert_eq!(steps[1]["status"], "failed");
@@ -169,10 +176,12 @@ fn fix_runs_in_the_fixed_order_and_keeps_going_after_a_failure() {
     let sandbox = Sandbox::new("fix").both_tools();
 
     let text = stdout(&sandbox.sisho(&["fix"], ""));
-    let first = text.find("✓ twrit check --fix").expect(&text);
-    let second = text.find("✓ tomet format -i").expect(&text);
-    assert!(first < second, "{text}");
-    assert!(text.contains("all 2 steps passed"), "{text}");
+    // Regenerate, then export what was regenerated, then format the result.
+    let generate = text.find("✓ twrit check --fix").expect(&text);
+    let export = text.find("✓ sisho export ").expect(&text);
+    let format = text.find("✓ tomet format -i").expect(&text);
+    assert!(generate < export && export < format, "{text}");
+    assert!(text.contains("all 3 steps passed"), "{text}");
 
     let output = sandbox.sisho(&["fix"], "twrit:check");
     let text = stdout(&output);
@@ -188,7 +197,8 @@ fn fix_has_a_json_form_too() {
     let json: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(json["ok"], true);
     assert_eq!(json["steps"][0]["name"], "twrit check --fix");
-    assert_eq!(json["steps"][1]["name"], "tomet format -i");
+    assert_eq!(json["steps"][1]["name"], "sisho export");
+    assert_eq!(json["steps"][2]["name"], "tomet format -i");
 }
 
 #[test]

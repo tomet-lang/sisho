@@ -5,3 +5,23 @@ edition.workspace = true
 license.workspace = true
 description = "Vault and workspace commands moved out of tomet: new, export, check-links, refactor, convert."
 publish = false
+
+[dependencies]
+tomet-ast = { workspace = true }
+tomet-config = { workspace = true }
+tomet-html = { workspace = true }
+tomet-indexer = { workspace = true }
+tomet-lexer = { workspace = true }
+tomet-links = { workspace = true }
+tomet-load = { workspace = true }
+tomet-load-config = { workspace = true }
+tomet-markdown = { workspace = true }
+tomet-pandoc = { workspace = true }
+tomet-parser = { workspace = true }
+tomet-semantics = { workspace = true }
+tomet-typst = { workspace = true }
+tomet-workspace = { workspace = true }
+
+#= Crates.io
+anyhow = { workspace = true }
+serde_json = { workspace = true }

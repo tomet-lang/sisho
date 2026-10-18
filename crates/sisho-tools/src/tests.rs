@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{Tool, check_steps, fix_steps};
+use crate::{Tool, check_steps, fix_format_steps, fix_generate_steps};
 
 fn lines(steps: &[sisho_run::Step]) -> Vec<String> {
     steps.iter().map(|s| s.command_line()).collect()
@@ -20,11 +20,14 @@ fn check_runs_these_commands_in_this_order() {
 }
 
 #[test]
-fn fix_runs_these_commands_in_this_order() {
-    let steps = fix_steps(Path::new("vault"));
+fn fix_generates_before_the_export_and_formats_after_it() {
     assert_eq!(
-        lines(&steps),
-        ["twrit check --fix vault", "tomet format -i vault"]
+        lines(&fix_generate_steps(Path::new("vault"))),
+        ["twrit check --fix vault"]
+    );
+    assert_eq!(
+        lines(&fix_format_steps(Path::new("vault"))),
+        ["tomet format -i vault"]
     );
 }
 
