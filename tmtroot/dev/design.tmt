@@ -106,7 +106,7 @@ twrit の AGENTS.md と tomet の CLI のコードから見えた依存。
 
 - `export` と `refactor` と `new` が tomet に残るので、それらを呼ぶ側(twrit の `just docs`、tomet の writ のガード `generated-md-not-edited` と `kind-not-meta-type`)は、そのまま使える。直す必要があるのは、移す 3 つ(`check-links`・`serve`・`tui`)を呼んでいる場所だけ。
 - tomet の flake は twrit を dev-shell のツールとして取り込み、twrit の flake も tomet を取り込んでいる。sisho が tomet と twrit の両方を固定する側に入ると、この相互参照の輪に sisho も加わる。ただし tomet 自身の文書の生成は sisho に依存しないので、輪は tomet の日常の作業には入ってこない。
-- `tomet-book` と `cli-docs` の出力は、消えるコマンドのぶん追従が要る。
+- `tomet-shelf` と `cli-docs` の出力は、消えるコマンドのぶん追従が要る。
 - 各リポジトリの writ の `guard: { runs: "just docs-check" }` は、`{ runs: "sisho check" }` に置き換えられる。
 
 ==[ 未決 ]
