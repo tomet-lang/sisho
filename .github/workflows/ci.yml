@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: Build · Test · Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: tomet
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+      # The package runs the workspace tests itself (`doCheck = true`).
+      - name: Build sisho package
+        run: nix build .#sisho
+
+      - name: Check docs
+        run: nix develop --command just docs-check
