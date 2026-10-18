@@ -85,6 +85,13 @@ pub enum Command {
     /// cannot be rendered is shown as an error page with status 500, so the
     /// browser tells you what is wrong. Stop it with Ctrl+C.
     Serve(ServeArgs),
+    /// Open the interactive workbench: Markdown migration, batch metadata
+    /// editing, and structural refactoring of the documents under a
+    /// directory.
+    ///
+    /// It takes over the terminal until you quit, and puts it back however
+    /// it ends.
+    Tui(TuiArgs),
     /// Run a tool with the rest of the command line, unchanged: `sisho tomet
     /// format -i .` is `tomet format -i .`.
     ///
@@ -252,4 +259,14 @@ pub struct ServeArgs {
     /// `<html lang="...">` for the page shell. Defaults to "ja".
     #[arg(long)]
     pub lang: Option<String>,
+}
+
+#[derive(Args)]
+pub struct TuiArgs {
+    /// Directory or file to open (defaults to the current directory).
+    #[arg(default_value = ".")]
+    pub path: PathBuf,
+    /// A formatting configuration file (.tmt) to use instead of the vault's.
+    #[arg(short, long)]
+    pub config: Option<PathBuf>,
 }

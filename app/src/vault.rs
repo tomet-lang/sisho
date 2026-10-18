@@ -18,7 +18,9 @@ use sisho_vault::new::{Context, Document};
 use sisho_vault::refactor::{self, Options};
 use sisho_vault::render::Html;
 
-use crate::cli::{CheckLinksArgs, ConvertArgs, ExportArgs, NewArgs, RefactorArgs, ServeArgs};
+use crate::cli::{
+    CheckLinksArgs, ConvertArgs, ExportArgs, NewArgs, RefactorArgs, ServeArgs, TuiArgs,
+};
 use crate::output::{BROKEN_PIPE, is_broken_pipe};
 
 /// The exit code of a vault command that failed.
@@ -597,4 +599,8 @@ pub fn run_serve(args: &ServeArgs, out: Sink<'_>, _err: Sink<'_>) -> Result<()> 
     served.map_err(|error| anyhow::anyhow!("cannot serve on port {}: {error}", args.port))?;
     announced?;
     Ok(())
+}
+
+pub fn tui(args: &TuiArgs) -> ExitCode {
+    finish(sisho_tui::run_tui(args.path.clone(), args.config.clone()))
 }

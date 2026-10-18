@@ -27,27 +27,34 @@ sisho-tui = { path = "crates/sisho-tui" }
 
 #= Tomet -- internal crates, as twrit takes them; the facade is not for apps
 tomet-ast = { git = "https://github.com/tomet-lang/tomet.git" }
-tomet-config = { git = "https://github.com/tomet-lang/tomet.git" }
-tomet-html = { git = "https://github.com/tomet-lang/tomet.git" }
-tomet-indexer = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-lexer = { git = "https://github.com/tomet-lang/tomet.git" }
-tomet-load = { git = "https://github.com/tomet-lang/tomet.git" }
-tomet-markdown = { git = "https://github.com/tomet-lang/tomet.git" }
-tomet-pandoc = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-tree = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-semantics = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-config = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-parser = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-printer = { git = "https://github.com/tomet-lang/tomet.git" }
-tomet-semantics = { git = "https://github.com/tomet-lang/tomet.git" }
-tomet-typst = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-transform = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-links = { git = "https://github.com/tomet-lang/tomet.git", features = ["cache"] }
+tomet-load = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-load-config = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-indexer = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-workspace = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-markdown = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-pandoc = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-typst = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-html = { git = "https://github.com/tomet-lang/tomet.git" }
+tree-sitter-tomet = { git = "https://github.com/tomet-lang/tomet.git" }
 
 #= Crates.io
 anyhow = "1"
 axum = { version = "0.8", default-features = false, features = ["http1", "tokio"] }
 clap = { version = "4.6", features = ["derive"] }
+crossterm = "0.28"
+ratatui = "0.29"
 serde_json = { version = "1", features = ["preserve_order"] }
 tokio = { version = "1", features = ["rt-multi-thread", "net"] }
+tree-sitter = "0.26"
+uuid = { version = "1.23", features = ["v4", "js"] }
 
 [profile.dev.package."*"]
 opt-level = 3
