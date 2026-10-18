@@ -145,6 +145,13 @@ pub fn convert_text(src: &str, path: &Path, direction: &Direction) -> Result<Str
 /// Convert one file, or standard input (`-`), and put the result where `plan`
 /// says.
 pub fn convert_file(path: &Path, direction: &Direction, plan: &Plan<'_>) -> Result<Converted> {
+    // Said before anything is read: waiting for input that can then only be
+    // refused would leave the person at a terminal with nothing to type.
+    if is_stdin(path) && plan.in_place && plan.out.is_none() && !plan.dry_run {
+        return Err(anyhow!(
+            "cannot convert in place: standard input is not a file"
+        ));
+    }
     let src = read(path)?;
     let text = convert_text(&src, path, direction)?;
 
@@ -164,11 +171,6 @@ pub fn convert_file(path: &Path, direction: &Direction, plan: &Plan<'_>) -> Resu
             out.to_path_buf()
         }
     } else if plan.in_place {
-        if is_stdin(path) {
-            return Err(anyhow!(
-                "cannot convert in place: standard input is not a file"
-            ));
-        }
         path.with_extension(ext)
     } else {
         return Ok(Converted::Text(text));
@@ -665,8 +667,8 @@ mod tests {
                 ..Plan::default()
             },
         );
-        // Reading stdin under a test run gives an empty string; the in-place
-        // refusal comes after the read, so it is what is reported.
+        // Refused before anything is read. If it read first, this test would
+        // wait for input at a terminal and never finish.
         assert!(
             error
                 .unwrap_err()

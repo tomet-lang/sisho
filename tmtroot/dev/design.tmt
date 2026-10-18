@@ -89,8 +89,9 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - 文書自身の `@config(export:)` は読まない。それは `export` の仕事で、`convert` は名前で頼む変換。
 - 標準出力に出すテキストは、ファイルに書くものと 1 バイトも違わない。tomet の変換コマンドは `println!` で改行を 1 つ足すものと足さないものが混在していて、sisho は足さない。これが tomet との意図した差の一つ。
 - ほかの意図した差は 2 つ。`--out` で書いたとき `Converted A -> B` を表示する(`from-md` と揃えた。tomet の `to-md` などは黙って書く)。存在しないパスには、どのパスかを言う(tomet の `to-md` は `No such file or directory (os error 2)` だけ)。それ以外は、`from-md` の全モード、ディレクトリ、Pandoc の標準入力まで、tomet と完全に一致することを確かめた。
+- `serve`(2026-10-18): 1 文書を HTML で、127.0.0.1 の HTTP で返し、リクエストのたびに読み直して描画する。描画は `convert --to html` と同じ関数なので、見えるものが `convert` の書くものと同じ。tomet の `serve` とページがバイト単位で一致することを確かめた。意図した差は 2 つ: 描画できない文書は HTTP 500 のエラーページ(tomet は 200)、描画とファイルの読み込みはブロッキング用のスレッドで行う。`--port 0` で空いているポートを使える。
 - `--advanced`・`--lang`・`--body` は `--to html` のときだけ。ほかの形式に付けると使い方の誤りで、終了コード 2。
-- 描画の糊(パースと準備、各形式への描画)は `sisho-vault` の `render` に 1 か所だけ置き、`export` と `convert` が共有する。`serve` も後でこれを使う。
+- 描画の糊(パースと準備、各形式への描画)は `sisho-vault` の `render` に 1 か所だけ置き、`export` と `convert` が共有する。`serve` は `convert` の関数を通して使う。
 
 ==[ 移すときに直す場所 ]
 

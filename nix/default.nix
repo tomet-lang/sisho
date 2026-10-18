@@ -26,7 +26,6 @@ flake-parts.lib.mkFlake { inherit inputs; } {
 
       devShells.default = pkgs.callPackage ./dev.nix {
         inherit inputs;
-        sisho = pkgs.callPackage ./pkgs/sisho.nix { inherit craneLib; };
         fenix = inputs.fenix.packages.${pkgs.stdenv.hostPlatform.system};
         tomet = tometPkgs.tomet;
         tomet-lsp = tometPkgs.tomet-lsp;

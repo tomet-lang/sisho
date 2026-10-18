@@ -5,3 +5,14 @@ edition.workspace = true
 license.workspace = true
 description = "Serve a .tmt document over HTTP for sisho."
 publish = false
+
+[dependencies]
+sisho-vault = { workspace = true }
+
+#= Crates.io
+anyhow = { workspace = true }
+axum = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["io-util", "macros"] }

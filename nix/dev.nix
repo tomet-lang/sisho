@@ -2,7 +2,6 @@
   pkgs,
   mkShell,
   fenix,
-  sisho,
   tomet,
   tomet-lsp,
   ...
@@ -21,7 +20,6 @@ let
 in
 mkShell {
   buildInputs = with pkgs; [
-    sisho
     tomet
     tomet-lsp
     just

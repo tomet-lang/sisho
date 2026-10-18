@@ -12,6 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 sisho-run = { workspace = true }
+sisho-serve = { workspace = true }
 sisho-tools = { workspace = true }
 sisho-vault = { workspace = true }
 

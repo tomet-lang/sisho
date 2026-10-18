@@ -33,6 +33,7 @@ sisho check-links [path]   # find links that point at nothing (cached, outside t
 sisho refactor [path]      # migrate old spellings; a dry run unless -i
 sisho export [path]        # write the outputs documents declare; --check compares
 sisho convert <path|-> --to F | --from F   # one document, standard input or a directory, to or from Tomet
+sisho serve <file>         # a document as HTML over HTTP on 127.0.0.1, rendered again per request
 sisho <tool> ...     # run a tool with the rest of the command line, unchanged
 ```
 
@@ -42,7 +43,7 @@ Both take `--json`, and `check` and `fix` take `--verbose` to show the output of
 
 Exit codes of `check` and `fix`: 0 when every step passed, 1 when any did not, 2 when `sisho` itself could not do its job (for example a usage error).
 
-Commands that work on the vault itself, like `new`, `check-links`, `refactor`, `export` and `convert`, exit 0 on success and 1 when they could not do what was asked, as `tomet` does; a usage error is 2.
+Commands that work on the vault itself, like `new`, `check-links`, `refactor`, `export`, `convert` and `serve`, exit 0 on success and 1 when they could not do what was asked, as `tomet` does; a usage error is 2.
 
 When the reader of the output goes away early (`sisho check-links | head`), `sisho` ends quietly with 141, which is 128 plus `SIGPIPE`, as a shell reports it.
 

@@ -37,6 +37,7 @@ fn main() -> ExitCode {
         Command::CheckLinks(args) => Ok(vault::check_links(args)),
         Command::Refactor(args) => Ok(vault::refactor(args)),
         Command::Export(args) => Ok(vault::export(args)),
+        Command::Serve(args) => Ok(vault::serve(args)),
         Command::Convert(args) => match vault::convert_direction(args) {
             Ok(direction) => Ok(vault::convert(args, &direction)),
             Err((kind, message)) => Cli::command().error(kind, message).exit(),

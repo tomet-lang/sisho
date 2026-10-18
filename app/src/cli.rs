@@ -78,6 +78,13 @@ pub enum Command {
     /// Nothing is read from a document's own `@config`: that is `sisho
     /// export`. This is the conversion you ask for by name.
     Convert(ConvertArgs),
+    /// Serve a document as HTML over HTTP on 127.0.0.1, rendering it again on
+    /// every request: edit the file and reload the page.
+    ///
+    /// It is the rendering of `sisho convert --to html`. A document that
+    /// cannot be rendered is shown as an error page with status 500, so the
+    /// browser tells you what is wrong. Stop it with Ctrl+C.
+    Serve(ServeArgs),
     /// Run a tool with the rest of the command line, unchanged: `sisho tomet
     /// format -i .` is `tomet format -i .`.
     ///
@@ -230,4 +237,19 @@ pub struct ConvertArgs {
     /// alongside this.
     #[arg(long)]
     pub body: bool,
+}
+
+#[derive(Args)]
+pub struct ServeArgs {
+    /// The document to serve.
+    pub file: PathBuf,
+    /// The port to listen on; 0 takes a free one.
+    #[arg(short, long, default_value_t = 8787)]
+    pub port: u16,
+    /// Number headings by nesting level and give them slugs.
+    #[arg(long)]
+    pub advanced: bool,
+    /// `<html lang="...">` for the page shell. Defaults to "ja".
+    #[arg(long)]
+    pub lang: Option<String>,
 }
