@@ -40,15 +40,6 @@ pub enum Command {
     /// vault, so checking a large vault again does not parse what has not
     /// changed. Exits 1 if a link is broken or a document could not be read.
     CheckLinks(CheckLinksArgs),
-    /// Write documents out in the formats their `@config(export: ..)` asks
-    /// for, or check that what was written is still what the source renders
-    /// to.
-    ///
-    /// A directory exports every document under it; one failing document
-    /// does not stop the others, but the run exits 1. With `--check` nothing
-    /// is written, and the run exits 1 if an output is out of date or missing,
-    /// or a document could not be checked.
-    Export(ExportArgs),
     /// Change a document, or a directory of them, from one format to another.
     ///
     /// `--to` reads Tomet and writes commonmark, html, typst or pandoc (its JSON
@@ -107,29 +98,6 @@ pub struct CheckLinksArgs {
     /// Print the report as JSON instead of human-readable text.
     #[arg(long)]
     pub json: bool,
-}
-
-#[derive(Args)]
-pub struct ExportArgs {
-    /// File or directory to export (defaults to ".").
-    #[arg(default_value = ".")]
-    pub path: PathBuf,
-    /// Format to export: `commonmark`, `html`, or `all`. Overrides what the
-    /// documents declare.
-    #[arg(short = 't', long)]
-    pub r#type: Option<String>,
-    /// Where to write. Overrides what the documents declare.
-    #[arg(short, long)]
-    pub out: Option<PathBuf>,
-    /// Number HTML headings by nesting level and give them slugs.
-    #[arg(long)]
-    pub advanced: bool,
-    /// Compare each declared output with what the source renders to now,
-    /// without writing anything. Exits 1 if any differ or are missing: a
-    /// generated file that disagrees with its source is a failure with a
-    /// mechanical fix.
-    #[arg(long)]
-    pub check: bool,
 }
 
 #[derive(Args)]

@@ -1,9 +1,7 @@
 mod cli;
+mod commands;
 mod output;
 mod report;
-mod steps;
-mod vault;
-mod verbs;
 
 use std::process::ExitCode;
 
@@ -22,7 +20,7 @@ fn main() -> ExitCode {
     let matches = Cli::command()
         .after_help(format!(
             "Tools: {}\n`sisho <tool> ...` runs the tool with the rest of the command line.",
-            verbs::tool_names()
+            commands::tool::tool_names()
         ))
         .get_matches();
     let cli = match Cli::from_arg_matches(&matches) {
@@ -31,17 +29,16 @@ fn main() -> ExitCode {
     };
 
     let result = match &cli.command {
-        Command::Check(args) => verbs::check(args),
-        Command::Fix(args) => verbs::fix(args),
-        Command::CheckLinks(args) => Ok(vault::check_links(args)),
-        Command::Export(args) => Ok(vault::export(args)),
-        Command::Serve(args) => Ok(vault::serve(args)),
-        Command::Tui(args) => Ok(vault::tui(args)),
-        Command::Convert(args) => match vault::convert_direction(args) {
-            Ok(direction) => Ok(vault::convert(args, &direction)),
+        Command::Check(args) => commands::check::check(args),
+        Command::Fix(args) => commands::fix::fix(args),
+        Command::CheckLinks(args) => Ok(commands::check_links::check_links(args)),
+        Command::Serve(args) => Ok(commands::serve::serve(args)),
+        Command::Tui(args) => Ok(commands::tui::tui(args)),
+        Command::Convert(args) => match commands::convert::convert_direction(args) {
+            Ok(direction) => Ok(commands::convert::convert(args, &direction)),
             Err((kind, message)) => Cli::command().error(kind, message).exit(),
         },
-        Command::Tool(words) => verbs::tool(words),
+        Command::Tool(words) => commands::tool::tool(words),
     };
     match result {
         Ok(code) => code,

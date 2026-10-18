@@ -18,7 +18,6 @@ The design memo is [tmtroot/dev/design.tmt](tmtroot/dev/design.tmt).
 sisho check [path]   # verify without writing; steps run at the same time
 sisho fix [path]     # regenerate, export, format; steps run one after another
 sisho check-links [path]   # find links that point at nothing (cached, outside the vault)
-sisho export [path]        # write the outputs documents declare; --check compares
 sisho convert <path|-> --to F | --from F   # one document, standard input or a directory, to or from Tomet
 sisho serve <file>         # a document as HTML over HTTP on 127.0.0.1, rendered again per request
 sisho tui [path]           # the interactive workbench: migrate Markdown, edit metadata in batches, refactor structure
@@ -27,13 +26,13 @@ sisho <tool> ...     # run a tool with the rest of the command line, unchanged
 
 Both take `--json`, and `check` and `fix` take `--verbose` to show the output of steps that passed too. One failing step does not stop the others. A tool that is not installed counts as a failure.
 
-`check` runs `tomet check`, `tomet format --check`, `twrit check`, and then `sisho`'s own `export --check`. `fix` runs `twrit check --fix`, `sisho export` and `tomet format -i`, in that order. `check-links` is not part of either: it is a command of its own.
+`check` runs `tomet check`, `tomet format --check`, `tomet export --check` and `twrit check`: the gate each repository's `docs-check` spelled out by hand. `fix` runs `twrit check --fix`, `tomet export` and `tomet format -i`, in that order. `check-links` is not part of either: it is a command of its own.
 
-What belongs to the language stays in `tomet`, which `sisho` reaches with `sisho tomet ...`: `sisho tomet new` makes a document from a blueprint, `sisho tomet refactor` migrates old spellings.
+What belongs to the language stays in `tomet`, which `sisho` reaches with `sisho tomet ...`: `sisho tomet new` makes a document from a blueprint, `sisho tomet refactor` migrates old spellings, `sisho tomet export` writes the outputs a document declares for itself.
 
 Exit codes of `check` and `fix`: 0 when every step passed, 1 when any did not, 2 when `sisho` itself could not do its job (for example a usage error).
 
-Commands that work on the vault itself, like `check-links`, `export`, `convert`, `serve` and `tui`, exit 0 on success and 1 when they could not do what was asked, as `tomet` does; a usage error is 2.
+Commands that work on the vault itself, like `check-links`, `convert`, `serve` and `tui`, exit 0 on success and 1 when they could not do what was asked, as `tomet` does; a usage error is 2.
 
 When the reader of the output goes away early (`sisho check-links | head`), `sisho` ends quietly with 141, which is 128 plus `SIGPIPE`, as a shell reports it.
 

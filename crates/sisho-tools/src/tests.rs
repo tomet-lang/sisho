@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{Tool, check_steps, fix_format_steps, fix_generate_steps};
+use crate::{Tool, check_steps, fix_steps};
 
 fn lines(steps: &[sisho_run::Step]) -> Vec<String> {
     steps.iter().map(|s| s.command_line()).collect()
@@ -14,6 +14,7 @@ fn check_runs_these_commands_in_this_order() {
         [
             "tomet check vault",
             "tomet format --check vault",
+            "tomet export --check vault",
             "twrit check vault",
         ]
     );
@@ -22,12 +23,12 @@ fn check_runs_these_commands_in_this_order() {
 #[test]
 fn fix_generates_before_the_export_and_formats_after_it() {
     assert_eq!(
-        lines(&fix_generate_steps(Path::new("vault"))),
-        ["twrit check --fix vault"]
-    );
-    assert_eq!(
-        lines(&fix_format_steps(Path::new("vault"))),
-        ["tomet format -i vault"]
+        lines(&fix_steps(Path::new("vault"))),
+        [
+            "twrit check --fix vault",
+            "tomet export vault",
+            "tomet format -i vault",
+        ]
     );
 }
 
@@ -66,7 +67,12 @@ fn step_names_say_what_the_step_does() {
         .collect();
     assert_eq!(
         names,
-        ["tomet check", "tomet format --check", "twrit check"]
+        [
+            "tomet check",
+            "tomet format --check",
+            "tomet export --check",
+            "twrit check"
+        ]
     );
 }
 

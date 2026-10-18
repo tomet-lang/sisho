@@ -11,10 +11,8 @@
 //! (`twrit` prints `no .writ.tmt found under .`, `tomet` prints
 //! `OK: 0 file(s)`). So every tool here runs every time.
 //!
-//! Only the steps that run a tool are here. `sisho`'s own checks and repairs
-//! (`export --check`, `export`) are not tool steps; the program puts them in
-//! the plan beside these. `fix` is split in two around `export` for that
-//! reason.
+//! Only the steps that run a tool are here. If `sisho` does a step itself
+//! one day, in-process, the program puts it in the plan beside these.
 
 mod plan;
 mod tool;
@@ -22,5 +20,5 @@ mod tool;
 #[cfg(test)]
 mod tests;
 
-pub use plan::{check_steps, fix_format_steps, fix_generate_steps};
+pub use plan::{check_steps, fix_steps};
 pub use tool::Tool;
