@@ -1,0 +1,7 @@
+# Normalize all text files to LF line endings
+* text=auto eol=lf
+
+#= Linguist
+tmtroot/ linguist-documentation=true
+*.md linguist-language=Markdown
+*.tmt linguist-language=Tomet

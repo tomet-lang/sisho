@@ -1,0 +1,15 @@
+[package]
+name = "sisho-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Orchestrator CLI for the Tomet ecosystem (tomet, twrit, tandr)."
+publish = false
+
+[[bin]]
+name = "sisho"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true }

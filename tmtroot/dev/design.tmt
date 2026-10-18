@@ -1,0 +1,78 @@
+=[ sisho 構想メモ ]
+
+状態: 構想段階。コードなし。2026-10-18 の議論の記録。下の「決めたこと」は議論で合意済み、「未決」はまだ。
+
+==[ 位置づけ ]
+
+tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo。
+
+- 独立したレポにする。tomet・twrit・tandr のどれもオーケストラを知らない。依存の向きは sisho から各ツールへの一方向。
+- 名前を言語から切り離す。`tomet` は rustc に当たる言語コアの CLI として残し、プロジェクト全体を扱う入口は別の名前にする。後から改良版やより良いオーケストラが出ても、言語名ごと手放さずに差し替えられる。
+- 名前の由来は司書。蔵書(.tmt の文書群)の所在を知り、各専門家(tomet・twrit・tandr)に仕事を頼む役。
+- 5 文字で、打ちやすさを基準に選んだ。nixpkgs と手元の PATH に同名はなく、GitHub にも星の付いた衝突はない(2026-10-18 時点)。
+
+==[ 需要の見立て ]
+
+- 今は各リポジトリの justfile に `docs-check` が手書きされている。twrit の AGENTS.md によれば、これは `tomet check .`、`tomet format --check .`、`tomet export --check .`、`twrit check .` を順に呼ぶもの。この集約が `sisho check` の中身になる。
+- `tomet check` と `twrit check` が別バイナリに並んでいて、「プロジェクト全体を検査する」入口がまだない。
+- tandr が実装されると、同じ問題がもう一つ増える。
+
+==[ 決めたこと ]
+
+===[ マニフェストを持たない ]
+
+- sisho は独自のマニフェストを持たない。tomet・twrit・tandr がそれぞれ独立したマニフェストを持っているので、それで足りる。
+- 足りないと感じたら、設計ミスを疑う。自前の設定を足す前に、ツール側が何を知っているべきかを考える。
+- twrit の原則と揃える。ガードはポインタであってプログラムではない。sisho は justfile の代わりにならず、任意のコマンドを実行しない。決まった集約だけを行う。
+
+===[ ツールの呼び方 ]
+
+- コア 3 つ(tomet・twrit・tandr)は sisho が直書きで知っている。自己申告や探索の仕組みは入れない。
+- 横断の動詞は、各ツールを子プロセスとして呼ぶ。crate として取り込まない。twrit が tomet のあるリビジョンを固定し、sisho が別のリビジョンを固定すると、同じ型が 2 つのバージョンで存在する菱形依存になるため。
+- sisho が自前で実装するもの(変換系、下記の移すコマンド)だけ、tomet の crate を git 依存で使う。入口は `crates/tomet` の facade。
+- ツール間の約束は小さく保つ。終了コード、`--json`、`--version`。
+- バージョンのずれは、プロトコルでは解かず、配布で解く。sisho の flake が tomet・twrit・tandr のリビジョンを固定し、一組として出す。rustup のツールチェーンと同じ考え方。
+- 拡張口(PATH 上の `sisho-foo` を `sisho foo` で呼ぶ cargo 式)は、第三者が参加したくなってから足す。足しても何も壊れない。
+
+===[ 動詞 ]
+
+横断の動詞は 2 つだけ。複数のツールが持つ動詞でないと、まとめて呼ぶ意味がないため。
+
+- `sisho check`: 何も書き換えずに全体を検証する。tomet の `check` / `format --check`、twrit の `check`、sisho 自前の `export --check` / `check-links` を含む。
+- `sisho fix`: 直せるものを直す。tomet の `format -i`、twrit の `check --fix`、sisho 自前の `export` / `refactor -i` を含む。
+- 失敗の扱いは tomet の `check` を踏襲する。1 つのツールが失敗しても残りを最後まで走らせ、最後に 1 つでも失敗があれば非ゼロで終了する。出力はツールごとにまとめ、どれが落ちたか分かるようにする。
+
+その他の動詞は横断にしない。
+
+- 素通し: `sisho tomet format ...` は PATH 上の `tomet` に引数をそのまま渡す。`sisho twrit ...` も同じ。ツール側は何も変えない。
+- `format` / `stats` / `api` は今のところ 1 つのツールしか持たない。素通しで足りる。
+
+===[ tomet から移すコマンド ]
+
+- 移す 6 つ: `new` / `export` / `check-links` / `refactor` / `serve` / `tui`。vault・workspace 単位の操作。
+- 理由の一つは依存。tomet の CLI は axum・tokio・tomet-tui まで引いていて、言語コアの CLI としては重い。
+- 最終形は tomet から撤去して sisho に移す。互換 alias は置かず、一度に移す。tomet は crates.io に公開せず、利用者はこのエコシステム内に限られるので、呼び出し側を一度に直せば済む。
+- tomet に残す: `check` / `ast` / `format` / `stats` / `roundtrip` / `cli-docs`。言語そのものに属する操作。
+
+===[ 変換系 ]
+
+- tomet には現行の単一ファイル変換(`html` / `to-md` / `to-typst` / `to-pandoc` / `from-md` / `from-pandoc`)を残す。
+- sisho には `sisho convert <path> --to <形式>` / `--from <形式>` を置く。ファイルでもディレクトリでも受け、ディレクトリなら vault 全体を変換する。変換先が増えても動詞は増えない。
+- 実装は `tomet-html` / `tomet-markdown` / `tomet-pandoc` / `tomet-typst` の crate にあり、両方の CLI はその薄い入口になる。実装の重複はなく、重複するのは動詞の面だけ。
+
+==[ 移すときに直す場所 ]
+
+twrit の AGENTS.md と tomet の CLI のコードから見えた依存。
+
+- twrit の `just docs` が `tomet export .` を呼んでいる。
+- tomet の writ のガードが `tomet export --check` と `tomet refactor --check` を指している(`generated-md-not-edited` と `kind-not-meta-type`)。
+- tomet の flake は twrit を dev-shell のツールとして取り込み、twrit の flake も tomet を取り込んでいる。sisho が tomet と twrit の両方を固定する側に入ると、この相互参照の輪に sisho も加わる。
+- `tomet-book` と `cli-docs` の出力も追従が要る。
+- 各リポジトリの writ の `guard: { runs: "just docs-check" }` は、`{ runs: "sisho check" }` に置き換えられる。
+
+==[ 未決 ]
+
+- 相互参照の flake を `flake.lock` で解けるかは、実際に作って確かめる。解けなければ、固定の仕方を考え直す。
+- tandr は実装がまだない。`sisho check` / `sisho fix` に tandr を含める時期と、その中身は、tandr の CLI が決まってから。
+- `--json` 出力を、ツールごとの出力からどう集約するか。
+- 横断の `check` が呼ぶ個別の呼び出し(tomet の `check` / `format --check` / `export --check` の分け方)の細部。
