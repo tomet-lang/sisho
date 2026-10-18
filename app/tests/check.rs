@@ -113,3 +113,69 @@ fn json_and_verbose_cannot_be_combined() {
         2
     );
 }
+
+#[test]
+fn a_tool_older_than_sisho_works_with_is_a_failed_step_first_in_the_report() {
+    let sandbox = Sandbox::new("old-tool").both_tools();
+    let output = sandbox.sisho_with(&["check"], "", &[("FAKE_VERSION_TOMET", "0.1.0")]);
+    let text = stdout(&output);
+
+    assert_eq!(code(&output), 1, "{text}");
+    assert!(text.contains("✗ tomet version"), "{text}");
+    assert!(
+        text.contains("tomet 0.1.0 is older than sisho needs (0.2.0 or newer): update tomet"),
+        "{text}"
+    );
+    // First in the report, and the tool's own steps still ran: they only read.
+    assert!(
+        text.find("tomet version") < text.find("tomet check"),
+        "{text}"
+    );
+    assert!(text.contains("✓ twrit check"), "{text}");
+    assert!(text.contains("1 of 5 steps did not pass"), "{text}");
+}
+
+#[test]
+fn a_tool_that_cannot_report_a_version_is_older_than_any_minimum() {
+    let sandbox = Sandbox::new("no-version").both_tools();
+    let output = sandbox.sisho_with(&["check"], "", &[("FAKE_NO_VERSION", "twrit")]);
+    let text = stdout(&output);
+
+    assert_eq!(code(&output), 1, "{text}");
+    assert!(text.contains("✗ twrit version"), "{text}");
+    assert!(
+        text.contains("`twrit --version` did not give a version, so twrit is older than sisho needs (0.2.0 or newer): update twrit"),
+        "{text}"
+    );
+    assert!(text.contains("twrit: version unknown"), "{text}");
+}
+
+#[test]
+fn a_tool_exactly_at_the_minimum_or_above_it_is_fine() {
+    let sandbox = Sandbox::new("new-enough").both_tools();
+    for version in ["0.2.0", "0.2.1", "0.10.0", "1.0.0"] {
+        let output = sandbox.sisho_with(&["check"], "", &[("FAKE_VERSION_TOMET", version)]);
+        assert_eq!(code(&output), 0, "{version}: {}", stdout(&output));
+    }
+}
+
+#[test]
+fn a_tool_that_is_not_installed_is_not_also_a_version_problem() {
+    let sandbox = Sandbox::new("missing-no-extra").tool("tomet");
+    let text = stdout(&sandbox.sisho(&["check"], ""));
+    assert!(text.contains("✗ twrit check"), "{text}");
+    assert!(!text.contains("twrit version"), "{text}");
+}
+
+#[test]
+fn json_says_what_each_tool_needs_and_lists_a_version_problem_as_a_step() {
+    let sandbox = Sandbox::new("json-needs").both_tools();
+    let output = sandbox.sisho_with(&["check", "--json"], "", &[("FAKE_VERSION_TWRIT", "0.1.5")]);
+    let json: Value = serde_json::from_slice(&output.stdout).unwrap();
+
+    assert_eq!(json["tools"][0]["needs"], "0.2.0");
+    assert_eq!(json["tools"][1]["version"], "twrit 0.1.5");
+    assert_eq!(json["ok"], false);
+    assert_eq!(json["steps"][0]["name"], "twrit version");
+    assert_eq!(json["steps"][0]["status"], "failed");
+}

@@ -23,13 +23,18 @@ impl Sandbox {
     }
 
     /// Install a fake tool called `name`. It prints `name 9.9.9` for
-    /// `--version`, exits with `N` for `exit-N`, echoes the first line of its
+    /// `--version` (another version if `FAKE_VERSION_<NAME>` is set; an error,
+    /// as a tool from before `--version` gave, if `FAKE_NO_VERSION` lists
+    /// `name`), exits with `N` for `exit-N`, echoes the first line of its
     /// standard input for `read-stdin`, fails with a message when `FAKE_FAIL`
     /// lists `name:<first argument>`, and otherwise echoes its arguments.
     pub fn tool(self, name: &str) -> Self {
+        let upper = name.to_uppercase();
         let script = format!(
             "#!/bin/sh\n\
-             case \"$1\" in --version) echo \"{name} 9.9.9\"; exit 0;; esac\n\
+             case \"$1\" in --version)\n\
+               case \",$FAKE_NO_VERSION,\" in *\",{name},\"*) echo \"error: unexpected argument '--version' found\" >&2; exit 2;; esac\n\
+               echo \"{name} ${{FAKE_VERSION_{upper}:-9.9.9}}\"; exit 0;; esac\n\
              case \"$1\" in exit-*) exit \"${{1#exit-}}\";; esac\n\
              case \"$1\" in read-stdin) read line; echo \"stdin: $line\"; exit 0;; esac\n\
              case \",$FAKE_FAIL,\" in *\",{name}:$1,\"*) echo \"boom from {name} $*\" >&2; exit 1;; esac\n\
@@ -47,12 +52,18 @@ impl Sandbox {
 
     /// Run `sisho` with only this directory on `PATH`.
     pub fn sisho(&self, args: &[&str], fail: &str) -> Output {
+        self.sisho_with(args, fail, &[])
+    }
+
+    /// [`Sandbox::sisho`], with more variables in the environment.
+    pub fn sisho_with(&self, args: &[&str], fail: &str, env: &[(&str, &str)]) -> Output {
         Command::new(env!("CARGO_BIN_EXE_sisho"))
             .args(args)
             .current_dir(&self.dir)
             .env_clear()
             .env("PATH", &self.dir)
             .env("FAKE_FAIL", fail)
+            .envs(env.iter().copied())
             .output()
             .unwrap()
     }

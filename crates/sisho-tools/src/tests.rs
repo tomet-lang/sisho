@@ -98,3 +98,86 @@ fn tools_are_found_by_name() {
 fn the_version_step_asks_for_the_version() {
     assert_eq!(Tool::Twrit.version_step().command_line(), "twrit --version");
 }
+
+mod versions {
+    use crate::{Tool, Verdict, Version, judge};
+
+    fn v(major: u64, minor: u64, patch: u64) -> Version {
+        Version::new(major, minor, patch)
+    }
+
+    #[test]
+    fn a_version_is_found_in_what_a_tool_prints() {
+        assert_eq!(Version::find("tomet 0.2.0"), Some(v(0, 2, 0)));
+        assert_eq!(Version::find("0.2.0"), Some(v(0, 2, 0)));
+        assert_eq!(Version::find("twrit 1.14.7-dev"), Some(v(1, 14, 7)));
+        assert_eq!(
+            Version::find("tomet 0.3.1+build5 (abc123)"),
+            Some(v(0, 3, 1))
+        );
+    }
+
+    #[test]
+    fn what_is_not_a_version_is_not_found() {
+        assert_eq!(Version::find(""), None);
+        assert_eq!(Version::find("tomet"), None);
+        assert_eq!(Version::find("tomet 1.2"), None);
+        assert_eq!(
+            Version::find("error: unexpected argument '--version' found"),
+            None
+        );
+    }
+
+    #[test]
+    fn versions_compare_by_number_not_by_text() {
+        assert!(v(0, 10, 0) > v(0, 9, 0));
+        assert!(v(1, 0, 0) > v(0, 99, 99));
+        assert!(Version::find("x 0.10.0") > Version::find("x 0.9.0"));
+    }
+
+    #[test]
+    fn a_version_at_or_above_the_minimum_is_fine() {
+        assert_eq!(
+            judge(Some("tomet 0.2.0"), v(0, 2, 0)),
+            Verdict::Fine(v(0, 2, 0))
+        );
+        assert_eq!(
+            judge(Some("tomet 0.3.0"), v(0, 2, 0)),
+            Verdict::Fine(v(0, 3, 0))
+        );
+        assert_eq!(
+            judge(Some("tomet 1.0.0"), v(0, 2, 0)),
+            Verdict::Fine(v(1, 0, 0))
+        );
+    }
+
+    #[test]
+    fn an_older_version_is_too_old() {
+        assert_eq!(
+            judge(Some("tomet 0.1.9"), v(0, 2, 0)),
+            Verdict::TooOld {
+                found: v(0, 1, 9),
+                needs: v(0, 2, 0)
+            }
+        );
+    }
+
+    #[test]
+    fn no_version_at_all_is_older_than_any_minimum() {
+        let needs = v(0, 2, 0);
+        assert_eq!(judge(None, needs), Verdict::Unreported { needs });
+        assert_eq!(
+            judge(Some("not a version"), needs),
+            Verdict::Unreported { needs }
+        );
+    }
+
+    #[test]
+    fn both_tools_need_at_least_0_2_0() {
+        for tool in Tool::ALL {
+            assert!(tool.min_version() >= v(0, 2, 0), "{}", tool.name());
+        }
+        assert!(Tool::Tomet.judge(Some("tomet 0.2.0")).is_fine());
+        assert!(!Tool::Twrit.judge(Some("twrit 0.1.0")).is_fine());
+    }
+}

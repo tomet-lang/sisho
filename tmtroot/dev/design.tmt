@@ -32,7 +32,8 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - sisho が自前で実装するもの(変換系、下記の移すコマンド)だけ、tomet の crate を git 依存で使う。入口は facade(`crates/tomet`)ではなく、内部 crate を直接使う。facade は `apps/*` が使わないよう意図して作られていて、コマンドが必要とする `tomet-workspace`・`tomet-indexer`・`tomet-lexer`・`tomet-load-config` を持たない(2026-10-18 にコードで確認。当初の「入口は facade」は誤りだった)。twrit も同じく内部 crate を直接使っている。
 - 固定は `Cargo.lock` で行う。ローカル開発では、gitignore 済みの `.cargo/config.toml` の `[patch]` で隣のチェックアウトに向ける(twrit と同じ)。
 - ツール間の約束は小さく保つ。終了コード、`--json`、`--version`。
-- バージョンのずれは、プロトコルでは解かず、配布で解く。sisho の flake が tomet・twrit・tandr のリビジョンを固定し、一組として出す。rustup のツールチェーンと同じ考え方。
+- バージョンのずれは、Nix に頼らずに、実行時に最低の版を確かめて解く(2026-10-18、cargo の `rust-version` と同じ形)。sisho は各ツールの最低の版を持ち(いまは tomet も twrit も 0.2.0)、`check` と `fix` の頭で `--version` を読んで比べる。古い、または版を返せないツールは、「`tomet version`」という失敗のステップとして報告の先頭に出て、`update tomet` と言う。`check` は読み取りだけなので、そのまま続ける。`fix` は書き込むので、何も書かずに 1 で終わる。入っていないツールは、そのツール自身のステップが「not found」と言うので、重ねては言わない。
+- Nix は開発環境の話で、製品の約束ではない。全員が Nix を使うとは限らないので、sisho は `flake.nix` を読まない。Nix の利用者に「sisho を入れると合う tomet と twrit も付いてくる」包装を出すのは、版付きのリリースが出て、作者以外が Nix で入れるようになってからでよい(fenix や rust-overlay に当たるものを、別のリポジトリで。各リポジトリのパッケージを束ねるだけにする)。非 Nix の側に当たるのは rustup で、将来 sisho が担うかもしれないが、いまの範囲の外。
 - 拡張口(PATH 上の `sisho-foo` を `sisho foo` で呼ぶ cargo 式)は、第三者が参加したくなってから足す。足しても何も壊れない。
 
 ===[ 動詞 ]
@@ -66,7 +67,7 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - 出力は、人間向けにはステップごとの見出しと結果。`--json` は `ok` と各ステップ(ツール、引数、結果、終了コード、所要時間、stdout、stderr)の配列。各ツール自身の `--json` 出力は解釈せず、文字列のまま入れる。
 - `sisho check [path]` の path(既定は `.`)は各ステップにそのまま渡す。
 - `fix` の最後に `check` を自動では再実行しない。確認したければ続けて `sisho check` を呼ぶ。
-- ツール間の約束の `--version` は、tomet・twrit とも持っていなかったので、2026-10-18 に両方へ `version` を足した(各レポで未コミット)。sisho はレポートの頭に各ツールのバージョンを出す。
+- ツール間の約束の `--version` は、tomet・twrit とも持っていなかったので、2026-10-18 に両方へ `version` を足し、その時点を 0.2.0 とした(それまでは、足す前も後も 0.1.0 で、番号では見分けられなかった)。tomet と twrit は、CLI の約束が変わったときに版を上げる。sisho はレポートの頭に各ツールのバージョンを出し、最低の版と比べる(上の項)。
 
 ===[ tomet から移すコマンド ]
 

@@ -4057,11 +4057,11 @@
         "twrit": "twrit_6"
       },
       "locked": {
-        "lastModified": 1792282238,
-        "narHash": "sha256-b9wn15vzJNaY9jU/nN5UCeR126+vZ1jyWsftozY0Uz8=",
+        "lastModified": 1792322633,
+        "narHash": "sha256-ytKcL6nSAwLC/1FPKXp/dGdRmpNrDRnRgbwah7xsNT0=",
         "owner": "tomet-lang",
         "repo": "tomet",
-        "rev": "ea820a075e843e3ac61347c1ab9ed6855dfd364a",
+        "rev": "3aad165864cd48221f0886d5a091aeadc66bbf31",
         "type": "github"
       },
       "original": {

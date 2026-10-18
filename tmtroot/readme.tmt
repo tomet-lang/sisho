@@ -39,6 +39,8 @@ Both take `--json`, and `check` and `fix` take `--verbose` to show the output of
 
 `check` runs `tomet check`, `tomet format --check`, `tomet export --check` and `twrit check`: the gate each repository's `docs-check` spelled out by hand. `fix` runs `twrit check --fix`, `tomet export` and `tomet format -i`, in that order. `check-links` is not part of either: it is a command of its own.
 
+`sisho` needs `tomet` and `twrit` to be at least 0.2.0, the version that gave `--version` its meaning, and reads `--version` of each to know. A tool that is older, or that cannot say its version, is a failed step called `<tool> version` first in the report, which says to update it. `check` goes on with the rest, since it only reads. `fix` writes nothing and exits 1, since it would have an older tool rewrite files. A tool that is not installed is reported by its own steps. Nothing here depends on how the tools were installed.
+
 What belongs to the language stays in `tomet`, which `sisho` reaches with `sisho tomet ...`: `sisho tomet new` makes a document from a blueprint, `sisho tomet refactor` migrates old spellings, `sisho tomet export` writes the outputs a document declares for itself.
 
 Exit codes of `check` and `fix`: 0 when every step passed, 1 when any did not, 2 when `sisho` itself could not do its job (for example a usage error).

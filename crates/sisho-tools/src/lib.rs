@@ -16,9 +16,11 @@
 
 mod plan;
 mod tool;
+mod version;
 
 #[cfg(test)]
 mod tests;
 
 pub use plan::{check_steps, fix_steps};
 pub use tool::Tool;
+pub use version::{Verdict, Version, judge};

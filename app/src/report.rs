@@ -84,6 +84,7 @@ pub fn json(path: &Path, versions: &[ToolVersion], outcomes: &[Outcome]) -> Valu
         "tools": versions.iter().map(|v| json!({
             "name": v.tool.name(),
             "version": v.version,
+            "needs": v.tool.min_version().to_string(),
         })).collect::<Vec<_>>(),
         "steps": outcomes.iter().map(step_json).collect::<Vec<_>>(),
     })

@@ -17,8 +17,8 @@ use std::io::{self, Write};
 use std::process::ExitCode;
 
 use anyhow::Result;
-use sisho_run::{Outcome, Report, Step};
-use sisho_tools::Tool;
+use sisho_run::{Outcome, Report, Status, Step};
+use sisho_tools::{Tool, Verdict};
 
 use crate::cli::RunArgs;
 use crate::output::{BROKEN_PIPE, is_broken_pipe};
@@ -85,4 +85,46 @@ pub fn write_json(
 /// 0 if every step passed, 1 if any did not.
 pub fn exit_code(report: &Report) -> ExitCode {
     ExitCode::from(report.exit_code())
+}
+
+/// The tools that are there but older than `sisho` works with, each as a
+/// failed step that says what to do.
+///
+/// A tool that is not installed is not one of them: its own steps already
+/// fail with "not found on PATH". A tool that cannot report a version is: the
+/// tools gave `--version` its meaning at the version `sisho` asks for, so one
+/// that cannot say is older than that.
+///
+/// `version_outcomes` are the results of [`version_steps`].
+pub fn version_problems(version_outcomes: &[Outcome]) -> Vec<Outcome> {
+    let mut problems = Vec::new();
+    for (tool, outcome) in Tool::ALL.iter().zip(version_outcomes) {
+        if outcome.status == Status::NotFound {
+            continue;
+        }
+        let reported = outcome
+            .is_pass()
+            .then(|| outcome.stdout.lines().next())
+            .flatten();
+        let name = tool.name();
+        let message = match tool.judge(reported) {
+            Verdict::Fine(_) => continue,
+            Verdict::TooOld { found, needs } => format!(
+                "{name} {found} is older than sisho needs ({needs} or newer): update {name}"
+            ),
+            Verdict::Unreported { needs } => format!(
+                "`{name} --version` did not give a version, so {name} is older than sisho \
+                 needs ({needs} or newer): update {name}"
+            ),
+        };
+        problems.push(Outcome {
+            name: format!("{name} version"),
+            command_line: format!("{name} --version"),
+            status: Status::Failed { code: 1 },
+            stdout: String::new(),
+            stderr: format!("{message}\n"),
+            duration: outcome.duration,
+        });
+    }
+    problems
 }
