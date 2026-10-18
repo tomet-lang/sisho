@@ -1,0 +1,30 @@
+@meta{
+  id: cli.serve
+}
+
+`sisho serve <FILE>`: show a document as HTML over HTTP. It is for writing: edit, reload, look at the result.
+
+Status: implemented. It was `tomet serve` and moved here when `tomet` was kept to what a document alone decides.
+
+The page is the one `sisho convert --to html` writes, and `tomet html`, so what you see is what those write.
+
+=[ Behaviour ]
+
+- Listens on `127.0.0.1` at `--port` (default 8787; `0` takes a free port). Nothing outside the machine can reach it. When it is ready it prints `Serving at http://127.0.0.1:<port> (Ctrl+C to stop)`.
+- Every request for `/` reads `FILE` again, renders it and returns it. Nothing is remembered: edit the file and reload the page. The vault's config and the `${...}` evaluation are redone each time.
+- `--advanced` and `--lang` mean what they mean for `convert --to html`. There is no `--body`.
+- A document that cannot be rendered is answered with an error page (the heading `Could not render`, the file name, the error text) and HTTP status 500, so the browser says what is wrong. Fix the document and the next reload is back to normal.
+- Stop it with `Ctrl+C`.
+
+There is no path other than `/`: it shows one document. If the port is already in use, startup fails and the exit code is 1.
+
+=[ Where it differs from `tomet serve` ]
+
+- A document that cannot be rendered is status 500, not 200, and the heading is `Could not render`, not `Parse error` (the cause is not always a parse error).
+- Reading and rendering run on a thread meant for blocking work, so a slow document does not hold up the server's other work.
+- `--port 0` takes a free port, which the ready line then names.
+
+=[ Not decided ]
+
+- Whether to notice a change in the document and reload the page by itself. Today the reload is by hand.
+- Whether to show a directory, or the documents a document links to.

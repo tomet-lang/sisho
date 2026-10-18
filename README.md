@@ -34,6 +34,8 @@ Exit codes of `check` and `fix`: 0 when every step passed, 1 when any did not, 2
 
 Commands that work on the vault itself, like `check-links`, `convert`, `serve` and `tui`, exit 0 on success and 1 when they could not do what was asked, as `tomet` does; a usage error is 2.
 
+The behaviour of `check-links`, `serve` and `tui`, which moved here from `tomet`, is written down under `tmtroot/spec/cli/`.
+
 When the reader of the output goes away early (`sisho check-links | head`), `sisho` ends quietly with 141, which is 128 plus `SIGPIPE`, as a shell reports it.
 
 `sisho <tool> ...` is a pass-through: the tool gets the terminal and everything after its name, flags included, and its exit code becomes `sisho`'s. A tool that is not installed exits 127, one that cannot be started 126, one ended by a signal 128 plus the signal, as `env` does.
