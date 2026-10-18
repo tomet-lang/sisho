@@ -10,6 +10,7 @@
 //! `check` and `fix`. The `tomet` types stay inside; the program does not
 //! depend on `tomet` crates.
 
+pub mod convert;
 pub mod diagnostic;
 pub mod export;
 pub mod links;

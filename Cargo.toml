@@ -35,6 +35,7 @@ tomet-load = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-markdown = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-pandoc = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-parser = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-printer = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-semantics = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-typst = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-links = { git = "https://github.com/tomet-lang/tomet.git", features = ["cache"] }

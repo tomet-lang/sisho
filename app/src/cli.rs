@@ -65,6 +65,19 @@ pub enum Command {
     /// is written, and the run exits 1 if an output is out of date or missing,
     /// or a document could not be checked.
     Export(ExportArgs),
+    /// Change a document, or a directory of them, from one format to another.
+    ///
+    /// `--to` reads Tomet and writes commonmark, html, typst or pandoc (its JSON
+    /// AST, which `pandoc -f json` turns into every format Pandoc writes).
+    /// `--from` reads md or pandoc (`pandoc -t json x.docx | sisho convert -
+    /// --from pandoc`) and writes Tomet. The input is a file, `-` for standard
+    /// input, or a directory; the output goes to standard output, to `--out`,
+    /// or next to the source with `--in-place`. A directory is converted into
+    /// files, so it needs `--out`, `--in-place` or `--dry-run`.
+    ///
+    /// Nothing is read from a document's own `@config`: that is `sisho
+    /// export`. This is the conversion you ask for by name.
+    Convert(ConvertArgs),
     /// Run a tool with the rest of the command line, unchanged: `sisho tomet
     /// format -i .` is `tomet format -i .`.
     ///
@@ -172,4 +185,49 @@ pub struct ExportArgs {
     /// mechanical fix.
     #[arg(long)]
     pub check: bool,
+}
+
+#[derive(Args)]
+pub struct ConvertArgs {
+    /// File or directory to convert, or `-` for standard input.
+    pub path: PathBuf,
+    /// Convert from Tomet to this format: commonmark (md), html, typst, pandoc.
+    #[arg(
+        long,
+        value_name = "FORMAT",
+        conflicts_with = "from",
+        required_unless_present = "from"
+    )]
+    pub to: Option<String>,
+    /// Convert to Tomet from this format: md (commonmark), pandoc.
+    #[arg(long, value_name = "FORMAT")]
+    pub from: Option<String>,
+    /// Write here instead of standard output: a file, or a directory (for a
+    /// file, it gets one named after the source; for a directory, it is
+    /// written into, keeping the sub-directories).
+    #[arg(short, long)]
+    pub out: Option<PathBuf>,
+    /// Write next to each source, with the new extension.
+    #[arg(short = 'i', long, alias = "write", conflicts_with = "out")]
+    pub in_place: bool,
+    /// Delete each source once its result is written. Only with `--from`:
+    /// converting to Tomet is a migration, and a Tomet source is not
+    /// something to throw away. Needs `--out` or `--in-place`.
+    #[arg(long)]
+    pub remove_original: bool,
+    /// Convert and check, and write nothing.
+    #[arg(long)]
+    pub dry_run: bool,
+    /// With `--to html`: number headings by nesting level and give them
+    /// slugs.
+    #[arg(long)]
+    pub advanced: bool,
+    /// With `--to html`: `<html lang="...">` for the page shell.
+    #[arg(long)]
+    pub lang: Option<String>,
+    /// With `--to html`: just the rendered body, with no `<html>` / `<head>`
+    /// shell, for templating into a page of your own. `--lang` has no effect
+    /// alongside this.
+    #[arg(long)]
+    pub body: bool,
 }

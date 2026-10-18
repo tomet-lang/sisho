@@ -761,6 +761,7 @@ dependencies = [
  "tomet-markdown",
  "tomet-pandoc",
  "tomet-parser",
+ "tomet-printer",
  "tomet-semantics",
  "tomet-typst",
  "tomet-workspace",

@@ -21,7 +21,6 @@ use anyhow::{Result, anyhow};
 use tomet_load::Vault;
 use tomet_semantics::{ExportType, document_config};
 
-use crate::diagnostic;
 use crate::render;
 
 /// What to export, and how.
@@ -223,16 +222,9 @@ fn export_into(
     } = settings.options;
 
     let src = fs::read_to_string(file)?;
-    // `vault.parse` and not `vault.document`, so the source text is still in
-    // hand for the report that points at the column.
-    let (mut doc, _bindings) = settings
-        .vault
-        .parse(&src)
-        .map_err(|e| anyhow!("{}", diagnostic::parse_error(file, &src, &e)))?;
-
     // Every `${...}` is resolved before anything renders, so every converter
     // is handed its value and none of them needs to know expressions exist.
-    settings.vault.prepare(&mut doc, file);
+    let doc = render::prepared(settings.vault, file, &src)?;
 
     let config = document_config(&doc);
 
@@ -289,7 +281,14 @@ fn export_into(
             ExportType::Pandoc => render::pandoc_json(&doc)?,
             ExportType::Html => {
                 let fallback = file.file_stem().and_then(|s| s.to_str()).unwrap_or("Tomet");
-                render::html_page(&doc, fallback, advanced)
+                render::html(
+                    &doc,
+                    fallback,
+                    &render::Html {
+                        advanced,
+                        ..render::Html::default()
+                    },
+                )
             }
             ExportType::Typst => render::typst(&doc),
             ExportType::Custom(format) => {

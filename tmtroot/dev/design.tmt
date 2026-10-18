@@ -78,8 +78,19 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 ===[ 変換系 ]
 
 - tomet には現行の単一ファイル変換(`html` / `to-md` / `to-typst` / `to-pandoc` / `from-md` / `from-pandoc`)を残す。
-- sisho には `sisho convert <path> --to <形式>` / `--from <形式>` を置く。ファイルでもディレクトリでも受け、ディレクトリなら vault 全体を変換する。変換先が増えても動詞は増えない。
+- sisho には `sisho convert <path> --to <形式>` / `--from <形式>` を置く。変換先が増えても動詞は増えない。
 - 実装は `tomet-html` / `tomet-markdown` / `tomet-pandoc` / `tomet-typst` の crate にあり、両方の CLI はその薄い入口になる。実装の重複はなく、重複するのは動詞の面だけ。
+
+実装した形(2026-10-18、「一番美しい形で」と任されて決めた)。
+
+- 方向は 2 つ。`--to` は Tomet を読んで commonmark(別名 md)・html・typst・pandoc を書く。`--from` は md(別名 commonmark)か pandoc を読んで Tomet を書く。どちらか一方が必須。
+- 入力はどの方向でも、ファイル、標準入力(`-`)、ディレクトリのどれでも受ける。自然な入力を一方向だけ拒む非対称を避けた。ディレクトリは、変換先が要るので `--out`・`--in-place`・`--dry-run` のどれかが要る。`--from pandoc` のディレクトリだけは受けない(Pandoc の JSON は 1 文書で、パイプで渡すもの)。
+- 出力先は、標準出力(既定)、`--out`(ファイル、または既存のディレクトリ。ディレクトリは構造を保つ)、`--in-place`(ソースの隣に新しい拡張子で)。`--out` と `--in-place` は両立しない。`--remove-original` は `--from` のときだけ、書いた後にソースを消す(Tomet のソースは捨てるものではない)。`--dry-run` は変換して確かめ、何も書かない。
+- 文書自身の `@config(export:)` は読まない。それは `export` の仕事で、`convert` は名前で頼む変換。
+- 標準出力に出すテキストは、ファイルに書くものと 1 バイトも違わない。tomet の変換コマンドは `println!` で改行を 1 つ足すものと足さないものが混在していて、sisho は足さない。これが tomet との意図した差の一つ。
+- ほかの意図した差は 2 つ。`--out` で書いたとき `Converted A -> B` を表示する(`from-md` と揃えた。tomet の `to-md` などは黙って書く)。存在しないパスには、どのパスかを言う(tomet の `to-md` は `No such file or directory (os error 2)` だけ)。それ以外は、`from-md` の全モード、ディレクトリ、Pandoc の標準入力まで、tomet と完全に一致することを確かめた。
+- `--advanced`・`--lang`・`--body` は `--to html` のときだけ。ほかの形式に付けると使い方の誤りで、終了コード 2。
+- 描画の糊(パースと準備、各形式への描画)は `sisho-vault` の `render` に 1 か所だけ置き、`export` と `convert` が共有する。`serve` も後でこれを使う。
 
 ==[ 移すときに直す場所 ]
 
