@@ -4,6 +4,7 @@
   fenix,
   tomet,
   tomet-lsp,
+  twrit,
   ...
 }:
 let
@@ -22,6 +23,7 @@ mkShell {
   buildInputs = with pkgs; [
     tomet
     tomet-lsp
+    twrit
     just
 
     #= Build

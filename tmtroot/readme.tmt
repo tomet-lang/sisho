@@ -53,6 +53,28 @@ When the reader of the output goes away early (`sisho check-links | head`), `sis
 
 `sisho <tool> ...` is a pass-through: the tool gets the terminal and everything after its name, flags included, and its exit code becomes `sisho`'s. A tool that is not installed exits 127, one that cannot be started 126, one ended by a signal 128 plus the signal, as `env` does.
 
+==[ With Nix ]
+
+Nothing in `sisho` needs Nix: it finds `tomet` and `twrit` on `PATH`, however they got there. For those who do use Nix, the flake brings the tools, so a repository imports `sisho` and nothing else for them:
+
+```nix
+inputs.sisho.url = "github:tomet-lang/sisho";
+
+# in a dev shell:
+packages = [ sisho.packages.${system}.toolchain ];   # sisho, tomet and twrit
+```
+
+Packages are `sisho`, `tomet`, `tomet-lsp`, `twrit` and `tomet-shelf`. `toolchain` bundles the core: `sisho`, `tomet` and `twrit`. To choose your own set, as with fenix:
+
+```nix
+sisho.legacyPackages.${system}.combine [
+  sisho.packages.${system}.toolchain
+  sisho.packages.${system}.tomet-shelf
+]
+```
+
+Each tool is built as its own flake builds it, so the binary cache of `tomet` serves them. The versions that go together are the ones `sisho`'s `flake.lock` pins; `nix flake update sisho` moves them all at once.
+
 ==[ Workspace Layout ]
 
 -| @dir(app) (`sisho-cli`) -- Main CLI binary (`sisho`). Layer 2.

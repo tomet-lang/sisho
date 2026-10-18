@@ -15,20 +15,48 @@ flake-parts.lib.mkFlake { inherit inputs; } {
   perSystem =
     { pkgs, ... }:
     let
+      system = pkgs.stdenv.hostPlatform.system;
       craneLib = inputs.crane.mkLib pkgs;
-      tometPkgs = inputs.tomet.packages.${pkgs.stdenv.hostPlatform.system};
+      tometPkgs = inputs.tomet.packages.${system};
+      twritPkgs = inputs.twrit.packages.${system};
+      shelfPkgs = inputs.tomet-shelf.packages.${system};
+
+      # Several packages as one: the `bin/` of each in a single directory.
+      combine =
+        paths:
+        pkgs.symlinkJoin {
+          name = "tomet-toolchain";
+          inherit paths;
+        };
     in
     {
       packages = rec {
         default = sisho;
         sisho = pkgs.callPackage ./pkgs/sisho.nix { inherit craneLib; };
+
+        # The tools, as their own flakes build them.
+        tomet = tometPkgs.tomet;
+        tomet-lsp = tometPkgs.tomet-lsp;
+        twrit = twritPkgs.twrit;
+        tomet-shelf = shelfPkgs.tomet-shelf;
+
+        # The core: what `sisho check` and `sisho fix` run. Add the rest with `combine`.
+        toolchain = combine [
+          sisho
+          tomet
+          twrit
+        ];
       };
+
+      # A function, so it cannot be a package: `legacyPackages.<system>.combine [ ... ]`.
+      legacyPackages.combine = combine;
 
       devShells.default = pkgs.callPackage ./dev.nix {
         inherit inputs;
-        fenix = inputs.fenix.packages.${pkgs.stdenv.hostPlatform.system};
+        fenix = inputs.fenix.packages.${system};
         tomet = tometPkgs.tomet;
         tomet-lsp = tometPkgs.tomet-lsp;
+        twrit = twritPkgs.twrit;
       };
 
       treefmt = import ./formatter.nix {

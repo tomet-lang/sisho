@@ -100,6 +100,17 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - `--advanced`・`--lang`・`--body` は `--to html` のときだけ。ほかの形式に付けると使い方の誤りで、終了コード 2。
 - 描画の糊(パースと準備、各形式への描画)は `sisho-vault` の `render` に 1 か所だけ置き、`export` と `convert` が共有する。`serve` は `convert` の関数を通して使う。
 
+===[ Nix で束ねる(toolchain) ]
+
+(2026-10-18、利用者と決めた。)ほとんどのリポジトリが tomet・twrit・tomet-shelf を flake の入力に取り込み、そのたびに各ツールの開発用の入力まで `flake.lock` に入っていた。基本的に tomet だけを欲しがる人は少ない。そこで、sisho の flake を入口にして、取り込むものを 1 つにする。
+
+- 名前は `toolchain`(rustup と fenix が使う語)。中身はコア 3 つ: `sisho`・`tomet`・`twrit`。`tomet-shelf` と `tomet-lsp` は入れない。
+- fenix と同じく選べる。`packages` に個別のもの(`sisho`・`tomet`・`tomet-lsp`・`twrit`・`tomet-shelf`)を出し、`legacyPackages.<system>.combine [ ... ]` で選んだものを束ねる。`combine` は関数なので、パッケージではなく `legacyPackages` に置く(`nix flake show` が警告を出さない)。`default` は `sisho` のまま。
+- 各ツールの開発用の入力は、sisho の flake の 1 か所で `inputs.<名前>.follows = ""` として切る。切るのは他のツールだけで、nixpkgs・crane・fenix は各ツール自身のものを使う。sisho と共有すると各ツールのビルドが自分の flake と変わり、バイナリキャッシュ(tomet.cachix.org)に当たらなくなる。
+- 測った数字: sisho の `flake.lock` は 301 ノードから 32 に。sisho だけを取り込む消費側は 33 ノード(これまでは 179〜732)。
+- 切る指定は、固定している版がその入力名を持っているときだけ効く。tomet-book を tomet-shelf に改めたあと、固定を新しい版へ進める(`nix flake update tomet twrit tomet-shelf`)まで、古い版の `tomet-book` の枝が丸ごと残った(301 → 138 ノード、更新後に 32)。ツール側が入力名を変えたら、sisho の固定を進めて数え直すこと。
+- tomet・twrit・tomet-shelf の flake そのものは変えていない。製品と開発環境を別の flake に分ける整理は、束ねとは独立で、あとで要るか決める。
+
 ==[ 移すときに直す場所 ]
 
 twrit の AGENTS.md と tomet の CLI のコードから見えた依存。
@@ -111,7 +122,7 @@ twrit の AGENTS.md と tomet の CLI のコードから見えた依存。
 
 ==[ 未決 ]
 
-- 相互参照の flake を `flake.lock` で解けるかは、実際に作って確かめる。解けなければ、固定の仕方を考え直す。
+- 他のリポジトリを `toolchain` へ切り替える(tomet・twrit・tomet-shelf 自身を含む)。入口が sisho になるので、tomet・twrit が sisho を取り込むと、sisho が両者を固定する輪が残る。切り替える順序と、輪が `flake.lock` で解けるかは、実際の消費側で確かめる。
 - tandr は実装がまだない。`sisho check` / `sisho fix` に tandr を含める時期と、その中身は、tandr の CLI が決まってから。
 - tomet が二重に固定される。`Cargo.lock`(ライブラリとして取り込む tomet)と `flake.lock`(dev shell の `tomet` バイナリ)。ずれると、`sisho check` が呼ぶ `tomet` と、sisho 内蔵の vault コマンドが別の版の挙動になる。両者の一致を確かめる仕組みは、あとで考える。
 - tomet の内部 API の変更への追随。固定が先に進んでも sisho のビルドは壊れないが、固定を進めるたびに取り込み側を直す必要がある。

@@ -23,8 +23,27 @@
       url = "github:ipetkov/crane";
     };
 
-    #= Tool
-    tomet.url = "github:tomet-lang/tomet";
+    #= Tools
+    # What sisho brings, so that a repository imports sisho and nothing else. Each tool keeps its
+    # own nixpkgs, crane and fenix, so it builds exactly as its own flake does and the binary
+    # cache keeps hitting. Only the inputs that serve the tool's own development are cut here:
+    # the other tools (which would unroll the tomet / twrit / tomet-shelf cycle into copies
+    # in the lock) and nothing else.
+    tomet = {
+      url = "github:tomet-lang/tomet";
+      inputs.twrit.follows = "";
+      inputs.tomet-shelf.follows = "";
+    };
+    twrit = {
+      url = "github:tomet-lang/twrit";
+      inputs.tomet.follows = "";
+      inputs.tomet-shelf.follows = "";
+    };
+    tomet-shelf = {
+      url = "github:tomet-lang/tomet-shelf";
+      inputs.tomet.follows = "";
+      inputs.twrit.follows = "";
+    };
   };
 
   outputs = inputs: import ./nix inputs;
