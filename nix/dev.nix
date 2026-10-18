@@ -37,6 +37,6 @@ mkShell {
   ];
 
   shellHook = ''
-    echo "📚 Sisho"
+    echo "🦀📚 Rust Tomet"
   '';
 }

@@ -35,10 +35,9 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         sisho = pkgs.callPackage ./pkgs/sisho.nix { inherit craneLib; };
 
         # The tools, as their own flakes build them.
-        tomet = tometPkgs.tomet;
-        tomet-lsp = tometPkgs.tomet-lsp;
-        twrit = twritPkgs.twrit;
-        tomet-shelf = shelfPkgs.tomet-shelf;
+        inherit (tometPkgs) tomet tomet-lsp;
+        inherit (twritPkgs) twrit;
+        inherit (shelfPkgs) tomet-shelf;
 
         # The core: what `sisho check` and `sisho fix` run. Add the rest with `combine`.
         toolchain = combine [
@@ -54,13 +53,12 @@ flake-parts.lib.mkFlake { inherit inputs; } {
       devShells.default = pkgs.callPackage ./dev.nix {
         inherit inputs;
         fenix = inputs.fenix.packages.${system};
-        tomet = tometPkgs.tomet;
-        tomet-lsp = tometPkgs.tomet-lsp;
-        twrit = twritPkgs.twrit;
+        inherit (tometPkgs) tomet tomet-lsp;
+        inherit (twritPkgs) twrit;
       };
 
       treefmt = import ./formatter.nix {
-        tomet = tometPkgs.tomet;
+        inherit (tometPkgs) tomet;
       };
     };
 }
