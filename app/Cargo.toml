@@ -20,4 +20,5 @@ sisho-vault = { workspace = true }
 #= Crates.io
 anyhow = { workspace = true }
 clap = { workspace = true }
+mimalloc = { workspace = true }
 serde_json = { workspace = true }
