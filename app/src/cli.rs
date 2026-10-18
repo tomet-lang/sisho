@@ -68,7 +68,8 @@ pub enum Command {
     /// it ends.
     Tui(TuiArgs),
     /// Run a tool with the rest of the command line, unchanged: `sisho tomet
-    /// format -i .` is `tomet format -i .`.
+    /// format -i .` is `tomet format -i .`. `sisho shelf build` is
+    /// `tomet-shelf build`.
     ///
     /// The tool gets the terminal and its exit code becomes sisho's. A tool
     /// that is not installed exits 127, one that cannot be started 126, one

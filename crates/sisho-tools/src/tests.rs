@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{Tool, check_steps, fix_steps};
+use crate::{SHELF, Tool, check_steps, fix_steps, program};
 
 fn lines(steps: &[sisho_run::Step]) -> Vec<String> {
     steps.iter().map(|s| s.command_line()).collect()
@@ -88,10 +88,37 @@ fn a_path_is_passed_through_unchanged() {
 }
 
 #[test]
-fn tools_are_found_by_name() {
-    assert_eq!(Tool::from_name("tomet"), Some(Tool::Tomet));
-    assert_eq!(Tool::from_name("twrit"), Some(Tool::Twrit));
-    assert_eq!(Tool::from_name("cargo"), None);
+fn programs_are_found_by_word() {
+    assert_eq!(program("tomet"), Some(Tool::Tomet.as_program()));
+    assert_eq!(program("twrit"), Some(Tool::Twrit.as_program()));
+    assert_eq!(program("shelf"), Some(SHELF));
+    assert_eq!(program("cargo"), None);
+}
+
+#[test]
+fn a_tool_runs_under_its_own_name() {
+    for tool in Tool::ALL {
+        let program = tool.as_program();
+        assert_eq!(program.word(), tool.name());
+        assert_eq!(program.program(), tool.name());
+    }
+}
+
+#[test]
+fn the_shelf_word_runs_tomet_shelf() {
+    assert_eq!(SHELF.word(), "shelf");
+    assert_eq!(SHELF.program(), "tomet-shelf");
+}
+
+#[test]
+fn shelf_takes_no_part_in_check_or_fix() {
+    // Not a `Tool`, so it has no version step and no minimum version, and
+    // neither plan runs it.
+    assert!(!Tool::ALL.iter().any(|tool| tool.as_program() == SHELF));
+    let path = Path::new(".");
+    for step in check_steps(path).iter().chain(&fix_steps(path)) {
+        assert_ne!(step.program(), SHELF.program(), "{}", step.command_line());
+    }
 }
 
 #[test]

@@ -1,7 +1,8 @@
 //! Layer 1: what sisho knows about the core tools.
 //!
 //! For `check` and `fix`, which invocation of `tomet`, `twrit` and `tandr`
-//! to run, and how a pass-through `sisho <tool> ...` resolves. The tools are
+//! to run, and how a pass-through `sisho <word> ...` resolves (see
+//! [`Program`]: the tools, and `tomet-shelf`, which is not one of them). The tools are
 //! called as subprocesses through `sisho-run`, never linked as crates (see
 //! the `tools-by-subprocess` rule in the workspace `.writ.tmt`).
 //!
@@ -15,6 +16,7 @@
 //! one day, in-process, the program puts it in the plan beside these.
 
 mod plan;
+mod program;
 mod tool;
 mod version;
 
@@ -22,5 +24,6 @@ mod version;
 mod tests;
 
 pub use plan::{check_steps, fix_steps};
+pub use program::{Program, SHELF, program, programs};
 pub use tool::Tool;
 pub use version::{Verdict, Version, judge};

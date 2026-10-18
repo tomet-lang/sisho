@@ -42,6 +42,8 @@ When the reader of the output goes away early (`sisho check-links | head`), `sis
 
 `sisho <tool> ...` is a pass-through: the tool gets the terminal and everything after its name, flags included, and its exit code becomes `sisho`'s. A tool that is not installed exits 127, one that cannot be started 126, one ended by a signal 128 plus the signal, as `env` does.
 
+`sisho shelf ...` is the same pass-through to `tomet-shelf`, which builds and serves a site from a vault: `sisho shelf build`, `sisho shelf serve`. The word is the role and the program keeps its own name. `shelf` takes no part in `check` or `fix`.
+
 ## With Nix
 
 Nothing in `sisho` needs Nix: it finds `tomet` and `twrit` on `PATH`, however they got there. For those who do use Nix, the flake brings the tools, so a repository imports `sisho` and nothing else for them:

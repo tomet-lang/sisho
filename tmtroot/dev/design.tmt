@@ -54,6 +54,10 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 
 - 素通し: `sisho tomet format ...` は PATH 上の `tomet` に引数をそのまま渡す。`sisho twrit ...` も同じ。ツール側は何も変えない。
 - `format` / `stats` / `api` は今のところ 1 つのツールしか持たない。素通しで足りる。
+- `sisho shelf ...` は `tomet-shelf ...` への素通し(2026-10-18 に利用者と決めた)。語は役割の `shelf`、プログラムは `tomet-shelf` のまま。`check` と `fix` には参加せず、`--version` の確認も最低の版も持たない。参加するかどうかと、素通しできるかどうかは別で、`sisho-tools` の `Tool`(参加する)と `Program`(`sisho <語>` で呼べる)に分けてある。
+  - `doc` という動詞にはしない。cargo の `doc` と rustdoc の類推は成り立つが、このエコシステムで docs は `.tmt` からの書き出し(`just docs`、`tomet export`)を指すので、サイトを作る動詞に使うと紛らわしい。
+  - `sisho-shelf` という実行ファイルは作らない。依存の向きは sisho から各ツールへの一方向で、shelf が sisho の流儀に合わせると逆になる。プログラムの名前も 1 つに保つ。
+  - shelf の `book-strict` に当たる検証を `check` に入れるかは別の判断として残す。入れると `check` が shelf のビルドぶん重くなる。
 
 ===[ check / fix の実行モデル ]
 

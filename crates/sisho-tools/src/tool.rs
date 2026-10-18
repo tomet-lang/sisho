@@ -23,11 +23,6 @@ impl Tool {
         }
     }
 
-    /// The tool called `name`, for a pass-through `sisho <name> ...`.
-    pub fn from_name(name: &str) -> Option<Tool> {
-        Tool::ALL.into_iter().find(|tool| tool.name() == name)
-    }
-
     /// `<tool> --version`, for the header of a report.
     pub fn version_step(self) -> Step {
         Step::new(format!("{} --version", self.name()), self.name()).arg("--version")

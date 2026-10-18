@@ -5,7 +5,7 @@ use std::process::ExitCode;
 
 use anyhow::{Result, bail};
 use sisho_run::{Status, Step};
-use sisho_tools::Tool;
+use sisho_tools::{program, programs};
 
 use crate::USAGE_ERROR;
 
@@ -17,7 +17,7 @@ pub fn tool(words: &[OsString]) -> Result<ExitCode> {
     let Some((name, args)) = words.split_first() else {
         bail!("no tool given");
     };
-    let Some(tool) = name.to_str().and_then(Tool::from_name) else {
+    let Some(program) = name.to_str().and_then(program) else {
         eprintln!(
             "sisho: `{}` is neither a command nor a tool\n  tools: {}\n  try `sisho --help`",
             name.to_string_lossy(),
@@ -26,22 +26,21 @@ pub fn tool(words: &[OsString]) -> Result<ExitCode> {
         return Ok(ExitCode::from(USAGE_ERROR));
     };
 
-    let status = Step::new(tool.name(), tool.name())
+    let status = Step::new(program.word(), program.program())
         .args(args)
         .run_inherited();
     if let Status::NotFound = status {
-        eprintln!("sisho: {} is not on PATH", tool.name());
+        eprintln!("sisho: {} is not on PATH", program.program());
     } else if let Status::CouldNotStart { reason } = &status {
-        eprintln!("sisho: could not start {}: {reason}", tool.name());
+        eprintln!("sisho: could not start {}: {reason}", program.program());
     }
     Ok(ExitCode::from(passthrough_code(&status)))
 }
 
-/// The names of the tools, for messages.
+/// The words that run a program, for messages.
 pub fn tool_names() -> String {
-    Tool::ALL
-        .iter()
-        .map(|tool| tool.name())
+    programs()
+        .map(|program| program.word())
         .collect::<Vec<_>>()
         .join(", ")
 }
