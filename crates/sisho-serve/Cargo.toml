@@ -1,0 +1,7 @@
+[package]
+name = "sisho-serve"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Serve a .tmt document over HTTP for sisho."
+publish = false

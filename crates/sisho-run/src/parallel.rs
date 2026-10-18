@@ -1,0 +1,44 @@
+use std::thread;
+
+use crate::outcome::Outcome;
+use crate::step::Step;
+
+/// One unit of work that produces an [`Outcome`]: a [`Step`], or work `sisho`
+/// does in-process.
+///
+/// Jobs of both kinds sit in the same list, which is why this is a type of its
+/// own rather than a bare closure.
+pub struct Job<'a>(Box<dyn FnOnce() -> Outcome + Send + 'a>);
+
+impl<'a> Job<'a> {
+    /// A job that runs `work`.
+    pub fn new(work: impl FnOnce() -> Outcome + Send + 'a) -> Self {
+        Self(Box::new(work))
+    }
+
+    /// A job that runs `step` as a subprocess.
+    pub fn step(step: &'a Step) -> Self {
+        Self::new(|| step.run())
+    }
+}
+
+/// Run `jobs` at the same time, one thread each, and return their outcomes in
+/// the order the jobs were given -- not the order they finished.
+///
+/// The count is not bounded; a run has a handful of steps, not thousands. If a
+/// job panics, the panic is passed on.
+pub fn run_parallel(jobs: Vec<Job<'_>>) -> Vec<Outcome> {
+    thread::scope(|scope| {
+        let handles: Vec<_> = jobs
+            .into_iter()
+            .map(|Job(work)| scope.spawn(work))
+            .collect();
+        handles
+            .into_iter()
+            .map(|handle| match handle.join() {
+                Ok(outcome) => outcome,
+                Err(panic) => std::panic::resume_unwind(panic),
+            })
+            .collect()
+    })
+}

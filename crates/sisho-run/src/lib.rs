@@ -1,0 +1,31 @@
+//! Layer 0: run external commands and collect what happened.
+//!
+//! This is the only crate allowed to start a process (see the `process-door`
+//! rule in the workspace `.writ.tmt`). It knows nothing about `tomet`,
+//! `twrit` or `tandr`; what to run is decided one layer up, in
+//! `sisho-tools`. It depends on no external crate (`tools-by-subprocess`).
+//!
+//! The pieces:
+//!
+//! - [`Step`] describes one command. [`Step::run`] runs it to completion and
+//!   captures its output; [`Step::run_inherited`] hands the terminal to it
+//!   instead, for a pass-through.
+//! - [`Outcome`] is what a step leaves behind, with a [`Status`] that tells
+//!   apart a failure, a tool that is not installed, and a tool killed by a
+//!   signal. Work that `sisho` does in-process produces the same [`Outcome`],
+//!   so a verb can mix both kinds.
+//! - [`run_parallel`] runs jobs on threads and returns their outcomes in the
+//!   order the jobs were given, whichever finished first.
+//! - [`Report`] collects outcomes and turns them into an exit code: a run
+//!   passes only if every step passed.
+
+mod outcome;
+mod parallel;
+mod step;
+
+#[cfg(test)]
+mod tests;
+
+pub use outcome::{Outcome, Report, Status};
+pub use parallel::{Job, run_parallel};
+pub use step::Step;

@@ -2,6 +2,11 @@
 resolver = "3"
 members = [
   "app",
+  "crates/sisho-run",
+  "crates/sisho-tools",
+  "crates/sisho-vault",
+  "crates/sisho-serve",
+  "crates/sisho-tui",
 ]
 
 default-members = ["app"]
@@ -14,10 +19,16 @@ license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
 sisho-cli = { path = "app" }
+sisho-run = { path = "crates/sisho-run" }
+sisho-tools = { path = "crates/sisho-tools" }
+sisho-vault = { path = "crates/sisho-vault" }
+sisho-serve = { path = "crates/sisho-serve" }
+sisho-tui = { path = "crates/sisho-tui" }
 
 #= Crates.io
 anyhow = "1"
 clap = { version = "4.6", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
 
 [profile.dev.package."*"]
 opt-level = 3

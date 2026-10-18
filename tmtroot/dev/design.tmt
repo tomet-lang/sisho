@@ -47,6 +47,20 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - 素通し: `sisho tomet format ...` は PATH 上の `tomet` に引数をそのまま渡す。`sisho twrit ...` も同じ。ツール側は何も変えない。
 - `format` / `stats` / `api` は今のところ 1 つのツールしか持たない。素通しで足りる。
 
+===[ check / fix の実行モデル ]
+
+2026-10-18 に合意。
+
+- 実行の単位(ステップ)は 2 種類。子プロセスで呼ぶもの(tomet・twrit・tandr)と、sisho が自前で実行するもの(vault のコマンド)。結果の型は `sisho-run`(層 0)で 1 つにし、`sisho-vault` もその型で返す。組み立ては層 2 の app が行う。
+- 結果は、通過、失敗(終了コード付き)、見つからない(PATH にツールがない)、シグナルで死亡の 4 つ。「見つからない」は失敗として数える。黙ってスキップすると、twrit が避けようとしている「読んでいないのに ok と言う」状態になるため。
+- sisho の終了コードは、すべて通過で 0、どれかが失敗で 1、sisho 自体のエラーで 2。
+- `check` は読み取り専用なので並列に走らせる。出力は取り込み、計画の順に表示する。`fix` は書き込みを伴うので、固定の順で直列に走らせる。順序は twrit の `just docs` に合わせて、`twrit check --fix`、`export`、`format -i`。
+- ツールが対象かどうかはツールが決める。対象がなければ、twrit は `no .writ.tmt found under .`、tomet は `OK: 0 file(s)` と明示して終了コード 0 で終わる(2026-10-18 に実際に確認)。だから sisho はコア 3 つを常に全部走らせる。
+- 出力は、人間向けにはステップごとの見出しと結果。`--json` は `ok` と各ステップ(ツール、引数、結果、終了コード、所要時間、stdout、stderr)の配列。各ツール自身の `--json` 出力は解釈せず、文字列のまま入れる。
+- `sisho check [path]` の path(既定は `.`)は各ステップにそのまま渡す。
+- `fix` の最後に `check` を自動では再実行しない。確認したければ続けて `sisho check` を呼ぶ。
+- ツール間の約束の `--version` は、tomet・twrit とも持っていなかったので、2026-10-18 に両方へ `version` を足した(各レポで未コミット)。sisho はレポートの頭に各ツールのバージョンを出す。
+
 ===[ tomet から移すコマンド ]
 
 - 移す 6 つ: `new` / `export` / `check-links` / `refactor` / `serve` / `tui`。vault・workspace 単位の操作。

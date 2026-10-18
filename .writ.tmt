@@ -1,0 +1,101 @@
+@kind(writ)
+
+=[ Writ: workspace root ]
+
+Rules the whole repository obeys.
+
+Scope is this directory and everything under it. A narrower rule lives in a
+`.writ.tmt` closer to what it governs; read every `.writ.tmt` from a file up
+to here, the way `.gitignore` is read.
+
+Only the author edits this file. An agent that finds a rule in its way
+proposes an edit here and stops. It does not work around the rule, and it
+does not relax the rule to fit the change it wanted to make.
+
+==[ crate-layering ]
+
+@rule(crate-layering){
+  guard: { twrit: layers }
+
+  layers: {
+    2: list( "app" )
+    1: list( "crates/sisho-tools", "crates/sisho-vault", "crates/sisho-serve", "crates/sisho-tui" )
+    0: list( "crates/sisho-run" )
+  }
+}
+
+Every workspace member belongs to exactly one layer, and depends only on
+layers strictly below its own. Same-layer dependencies are allowed;
+upward ones are not.
+
+Layer 0 runs commands and knows no tool by name. Layer 1 holds what `sisho`
+knows about the core tools (`sisho-tools`) and what it implements itself
+(`sisho-vault`, `sisho-serve`, `sisho-tui`). Layer 2 is the program.
+
+`sisho-serve` and `sisho-tui` are their own crates so that the HTTP and
+terminal-UI stacks stay out of the build of every other command.
+
+Dev-dependencies are exempt.
+
+---[ Why ]---
+
+The order is what keeps a change local. Adding a tool means touching
+`sisho-tools` and the program, not the runner. An edge running upward is
+the first sign that a layer has started to know what it should not.
+
+==[ tools-by-subprocess ]
+
+@rule(tools-by-subprocess){
+  guard: { twrit: pure }
+
+  pure: {
+    crates: [ "crates/sisho-run", "crates/sisho-tools" ]
+    forbid: [ "std::fs", "std::net" ]
+    allow-external: list()
+  }
+}
+
+`tomet`, `twrit` and `tandr` are called as subprocesses, never linked as
+crates. The two crates that run and describe those calls depend on no
+external crate at all, so no `tomet-*` crate can arrive through them.
+
+Only what `sisho` implements itself -- `sisho-vault`, `sisho-serve`,
+`sisho-tui` -- uses the `tomet` crates, through git dependencies.
+
+---[ Why ]---
+
+If `twrit` pins one revision of `tomet` and `sisho` pins another, the same
+type exists in two versions and nothing links. A subprocess has no types to
+disagree about. The versions are kept in step by the flake, which pins the
+tools as one set.
+
+==[ process-door ]
+
+@rule(process-door){
+  guard: { twrit: door }
+
+  door: {
+    names: list( "std::process" )
+    within: list( "crates/*" )
+    allowed: list( "crates/sisho-run" )
+  }
+}
+
+A library crate starts a process only if it is named above. Programs are
+out of scope: the program decides what to run through the crates below it.
+
+---[ Why ]---
+
+`sisho` is not a task runner and executes no command it was not written to
+know. Keeping the one place that can start a process small makes that
+checkable: a new crate that starts reaching for `std::process` is the
+failure, and it shows up here rather than in review.
+
+==[ tmtroot-output-not-edited ]
+
+@rule(tmtroot-output-not-edited){
+  guard: { runs: "just docs-check" }
+}
+
+A file exported from @dir(tmtroot/) is generated. Do not hand-edit it. Edit
+the source and re-export.
