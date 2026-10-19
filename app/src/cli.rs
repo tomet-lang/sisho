@@ -11,6 +11,13 @@ use clap::{Args, Parser, Subcommand};
     arg_required_else_help = true
 )]
 pub struct Cli {
+    /// Number of parallel jobs to run.
+    ///
+    /// Only matters for the commands that run tools in parallel (`check`, `fix`).
+    /// If a jobserver was inherited from the environment, it wins and `-j` is not used.
+    #[arg(short = 'j', long = "jobs", global = true, value_name = "N")]
+    pub jobs: Option<std::num::NonZeroUsize>,
+
     #[command(subcommand)]
     pub command: Command,
 }

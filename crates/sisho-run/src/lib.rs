@@ -3,7 +3,7 @@
 //! This is the only crate allowed to start a process (see the `process-door`
 //! rule in the workspace `.writ.tmt`). It knows nothing about `tomet`,
 //! `twrit` or `tandr`; what to run is decided one layer up, in
-//! `sisho-tools`. It depends on no external crate (`tools-by-subprocess`).
+//! `sisho-tools`. It depends on no external crate except `jobserver` and what it needs (see `tools-by-subprocess`).
 //!
 //! The pieces:
 //!
@@ -18,7 +18,9 @@
 //!   order the jobs were given, whichever finished first.
 //! - [`Report`] collects outcomes and turns them into an exit code: a run
 //!   passes only if every step passed.
+//! - [`JobServerGate`] bounds the concurrency across jobs and child processes.
 
+mod gate;
 mod outcome;
 mod parallel;
 mod step;
@@ -26,6 +28,7 @@ mod step;
 #[cfg(test)]
 mod tests;
 
+pub use gate::{JobServerGate, JobToken, gate, init_gate};
 pub use outcome::{Outcome, Report, Status};
 pub use parallel::{Job, run_parallel};
 pub use step::Step;

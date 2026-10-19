@@ -51,13 +51,15 @@ the first sign that a layer has started to know what it should not.
   pure: {
     crates: [ "crates/sisho-run", "crates/sisho-tools" ]
     forbid: [ "std::fs", "std::net" ]
-    allow-external: list()
+    allow-external: list( "jobserver", "libc", "getrandom", "cfg-if", "r-efi" )
   }
 }
 
 `tomet`, `twrit` and `tandr` are called as subprocesses, never linked as
 crates. The two crates that run and describe those calls depend on no
-external crate at all, so no `tomet-*` crate can arrive through them.
+external crate except what is in the allowlist: `jobserver` and what it brings
+in (`libc`, `getrandom`, `cfg-if`, `r-efi`). None of it is a `tomet-*` crate;
+a `jobserver` update may change the list.
 
 Only what `sisho` implements itself -- `sisho-vault`, `sisho-serve`,
 `sisho-tui` -- uses the `tomet` crates, through git dependencies.

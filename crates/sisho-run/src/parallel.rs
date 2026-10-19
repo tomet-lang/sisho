@@ -1,6 +1,7 @@
 use std::thread;
+use std::time::Duration;
 
-use crate::outcome::Outcome;
+use crate::outcome::{Outcome, Status};
 use crate::step::Step;
 
 /// One unit of work that produces an [`Outcome`]: a [`Step`], or work `sisho`
@@ -28,10 +29,32 @@ impl<'a> Job<'a> {
 /// The count is not bounded; a run has a handful of steps, not thousands. If a
 /// job panics, the panic is passed on.
 pub fn run_parallel(jobs: Vec<Job<'_>>) -> Vec<Outcome> {
-    thread::scope(|scope| {
+    let outcomes = thread::scope(|scope| {
         let handles: Vec<_> = jobs
             .into_iter()
-            .map(|Job(work)| scope.spawn(work))
+            .map(|Job(work)| {
+                scope.spawn(|| {
+                    let _token = match crate::gate::gate() {
+                        Some(g) => match g.acquire() {
+                            Ok(token) => Some(token),
+                            Err(err) => {
+                                return Outcome {
+                                    name: "jobserver".to_string(),
+                                    command_line: String::new(),
+                                    status: Status::CouldNotStart {
+                                        reason: format!("failed to acquire jobserver token: {err}"),
+                                    },
+                                    stdout: String::new(),
+                                    stderr: String::new(),
+                                    duration: Duration::ZERO,
+                                };
+                            }
+                        },
+                        None => None,
+                    };
+                    work()
+                })
+            })
             .collect();
         handles
             .into_iter()
@@ -40,5 +63,11 @@ pub fn run_parallel(jobs: Vec<Job<'_>>) -> Vec<Outcome> {
                 Err(panic) => std::panic::resume_unwind(panic),
             })
             .collect()
-    })
+    });
+
+    if let Some(gate) = crate::gate::gate() {
+        gate.reclaim_implicit_token();
+    }
+
+    outcomes
 }

@@ -31,6 +31,11 @@ fn main() -> ExitCode {
         Err(error) => error.exit(),
     };
 
+    if let Err(error) = init_jobserver(cli.jobs.map(|n| n.get())) {
+        eprintln!("sisho: {error:#}");
+        return ExitCode::from(OWN_ERROR);
+    }
+
     let result = match &cli.command {
         Command::Check(args) => commands::check::check(args),
         Command::Fix(args) => commands::fix::fix(args),
@@ -51,4 +56,40 @@ fn main() -> ExitCode {
             ExitCode::from(OWN_ERROR)
         }
     }
+}
+
+fn init_jobserver(jobs: Option<usize>) -> std::io::Result<()> {
+    // SAFETY: `from_env_ext` reads and takes ownership of file descriptors specified in
+    // environment variables (such as `CARGO_MAKEFLAGS`). This function is called once,
+    // early in `main` before any other file descriptors are opened or threads are spawned,
+    // ensuring those descriptors are valid and not concurrently reused.
+    let from_env = unsafe { jobserver::Client::from_env_ext(true) };
+    let client = match from_env.client {
+        Ok(client) => client,
+        Err(err) => {
+            if let Some((var_name, var_val)) = from_env.var
+                && !matches!(
+                    err.kind(),
+                    jobserver::FromEnvErrorKind::NoJobserver
+                        | jobserver::FromEnvErrorKind::NoEnvVar
+                )
+            {
+                eprintln!(
+                    "warning: failed to connect to jobserver from environment variable `{}=\"{}\"`: {}",
+                    var_name,
+                    var_val.to_string_lossy(),
+                    err
+                );
+            }
+            let limit = jobs.unwrap_or_else(|| {
+                std::thread::available_parallelism()
+                    .map(|n| n.get())
+                    .unwrap_or(4)
+            });
+            let pipe_tokens = limit.saturating_sub(1);
+            jobserver::Client::new(pipe_tokens)?
+        }
+    };
+    sisho_run::init_gate(client);
+    Ok(())
 }

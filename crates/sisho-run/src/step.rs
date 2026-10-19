@@ -125,6 +125,9 @@ impl Step {
         if let Some(dir) = &self.current_dir {
             command.current_dir(dir);
         }
+        if let Some(gate) = crate::gate::gate() {
+            gate.configure(&mut command);
+        }
         command
     }
 }
