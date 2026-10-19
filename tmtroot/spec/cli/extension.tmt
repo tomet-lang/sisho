@@ -28,3 +28,22 @@ Built-in commands (`check`, `fix`, `check-links`, `convert`, `serve`) and known 
    - If the extension executable exists but cannot be started (e.g. permission denied), `sisho` exits 126.
    - If the extension is terminated by a signal, `sisho` exits with 128 plus the signal number.
    - Otherwise, `sisho` exits with the extension's exit code.
+
+=[ Listing Extensions ]
+
+`sisho --list` (or `-l`): print all installed extensions found on `PATH`.
+
+1. **Discovery**: `sisho` inspects directories in `PATH` order. A file is considered an extension if:
+   - Its filename matches `sisho-<word>` where `<word>` conforms to the allowed word format (ASCII lowercase letters, digits, hyphens, not starting with a hyphen).
+   - It is executable by the current user.
+2. **No subprocess execution**: `sisho --list` never executes discovered extension binaries.
+3. **Output format**:
+   - For each extension, prints the `<word>` and the path to the executable, separated by spaces.
+   - Extensions shadowed by a built-in command or known tool are annotated with `(shadowed by builtin)`.
+   - When the same extension word appears multiple times in different `PATH` directories, only the first occurrence (the one that would run) is shown by default.
+4. **`--all` flag**:
+   - `sisho --list --all`: also displays duplicate programs found later in `PATH`, annotated with `(shadowed by <first_path>)`.
+5. **Exit codes**:
+   - 0 on success (an empty list when no extensions are found is a success).
+   - 2 on usage error (e.g. invalid arguments).
+   - 141 if standard output is closed (broken pipe).

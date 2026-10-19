@@ -18,8 +18,16 @@ pub struct Cli {
     #[arg(short = 'j', long = "jobs", global = true, value_name = "N")]
     pub jobs: Option<std::num::NonZeroUsize>,
 
+    /// List installed extensions found on PATH.
+    #[arg(short = 'l', long = "list")]
+    pub list: bool,
+
+    /// Show all matching executables on PATH, including hidden duplicates.
+    #[arg(long, requires = "list")]
+    pub all: bool,
+
     #[command(subcommand)]
-    pub command: Command,
+    pub command: Option<Command>,
 }
 
 #[derive(Subcommand)]

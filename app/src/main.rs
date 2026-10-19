@@ -3,6 +3,7 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod cli;
 mod commands;
+mod extension;
 mod output;
 mod report;
 
@@ -31,12 +32,21 @@ fn main() -> ExitCode {
         Err(error) => error.exit(),
     };
 
+    if cli.list {
+        return extension::list(cli.all);
+    }
+
+    let Some(command) = &cli.command else {
+        let _ = Cli::command().print_help();
+        return ExitCode::from(USAGE_ERROR);
+    };
+
     if let Err(error) = init_jobserver(cli.jobs.map(|n| n.get())) {
         eprintln!("sisho: {error:#}");
         return ExitCode::from(OWN_ERROR);
     }
 
-    let result = match &cli.command {
+    let result = match command {
         Command::Check(args) => commands::check::check(args),
         Command::Fix(args) => commands::fix::fix(args),
         Command::CheckLinks(args) => Ok(commands::check_links::check_links(args)),

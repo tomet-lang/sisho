@@ -8,16 +8,7 @@ use sisho_run::{Status, Step};
 use sisho_tools::{program, programs};
 
 use crate::USAGE_ERROR;
-
-/// An extension word is made only of ASCII lowercase letters, digits, and
-/// hyphens, and does not start with a hyphen.
-fn is_valid_extension_word(word: &str) -> bool {
-    !word.is_empty()
-        && !word.starts_with('-')
-        && word
-            .bytes()
-            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
-}
+use crate::extension::is_valid_word;
 
 /// `sisho <tool> ...`: run the tool or extension with the rest of the command line.
 ///
@@ -41,7 +32,7 @@ pub fn tool(words: &[OsString]) -> Result<ExitCode> {
         return Ok(ExitCode::from(passthrough_code(&status)));
     }
 
-    if let Some(word) = word.filter(|w| is_valid_extension_word(w)) {
+    if let Some(word) = word.filter(|w| is_valid_word(w)) {
         let extension = format!("sisho-{word}");
         let status = Step::new(word, &extension).args(args).run_inherited();
         match &status {
@@ -111,21 +102,5 @@ mod tests {
             126
         );
         assert_eq!(passthrough_code(&Status::Signalled { signal: 9 }), 137);
-    }
-
-    #[test]
-    fn valid_extension_words_only_contain_allowed_characters() {
-        assert!(is_valid_extension_word("desk"));
-        assert!(is_valid_extension_word("sisho-desk"));
-        assert!(is_valid_extension_word("foo123"));
-        assert!(is_valid_extension_word("a-b-c-1"));
-
-        assert!(!is_valid_extension_word(""));
-        assert!(!is_valid_extension_word("-desk"));
-        assert!(!is_valid_extension_word("Desk"));
-        assert!(!is_valid_extension_word("a/b"));
-        assert!(!is_valid_extension_word("../x"));
-        assert!(!is_valid_extension_word("foo.bar"));
-        assert!(!is_valid_extension_word("foo bar"));
     }
 }
