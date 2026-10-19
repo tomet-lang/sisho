@@ -9,9 +9,13 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
 fn install_concurrency_tracking_tool(dir: &Path, name: &str, shared_dir: &Path) {
+    // The tool runs with only the test directory on `PATH`, yet it needs `rm` and `sleep`. They
+    // are found through the test process's own `PATH`, wherever the system keeps them; with `rm`
+    // missing, the `active_*` files pile up and the count only grows.
+    let host_path = std::env::var("PATH").unwrap_or_default();
     let script = format!(
         r#"#!/bin/sh
-export PATH="/run/current-system/sw/bin:/usr/bin:/bin:$PATH"
+export PATH="{host_path}:$PATH"
 
 # Record whether the tool inherited the jobserver authentication flag
 case "$CARGO_MAKEFLAGS $MAKEFLAGS" in
