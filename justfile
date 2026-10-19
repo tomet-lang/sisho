@@ -10,12 +10,10 @@ test:
     cargo test --workspace
 
 # Generate and update all derived documentation across the workspace.
+# Runs this checkout's own `sisho`: the dev shell does not carry one.
 docs:
-    tomet export .
-    tomet format -i .
+    cargo run -q -p sisho-cli -- fix .
 
 # Check that all documents parse, format cleanly, and match export targets.
 docs-check:
-    tomet check .
-    tomet format --check .
-    tomet export --check .
+    cargo run -q -p sisho-cli -- check .
