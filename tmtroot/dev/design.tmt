@@ -34,7 +34,15 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - ツール間の約束は小さく保つ。終了コード、`--json`、`--version`。
 - バージョンのずれは、Nix に頼らずに、実行時に最低の版を確かめて解く(2026-10-18、cargo の `rust-version` と同じ形)。sisho は各ツールの最低の版を持ち(いまは tomet も twrit も 0.2.0)、`check` と `fix` の頭で `--version` を読んで比べる。古い、または版を返せないツールは、「`tomet version`」という失敗のステップとして報告の先頭に出て、`update tomet` と言う。`check` は読み取りだけなので、そのまま続ける。`fix` は書き込むので、何も書かずに 1 で終わる。入っていないツールは、そのツール自身のステップが「not found」と言うので、重ねては言わない。
 - Nix は開発環境の話で、製品の約束ではない。全員が Nix を使うとは限らないので、sisho は `flake.nix` を読まない。Nix の利用者に「sisho を入れると合う tomet と twrit も付いてくる」包装は、別のリポジトリではなく、sisho の flake 自身が出す(2026-10-18、「Nix で束ねる」の節)。非 Nix の側に当たるのは rustup で、将来 sisho が担うかもしれないが、いまの範囲の外。
-- 拡張口(PATH 上の `sisho-foo` を `sisho foo` で呼ぶ cargo 式)は、第三者が参加したくなってから足す。足しても何も壊れない。
+- 拡張口(PATH 上の `sisho-foo` を `sisho foo` で呼ぶ cargo 式)は、第三者が参加したくなってから足す。足しても何も壊れない。(2026-10-20 に下の決定で更新。)
+- (2026-10-20 決定) 拡張機構を導入し、現行の `sisho tui` を最初のリファレンス拡張 `sisho-desk` として別リポジトリへ切り出す。誰も作っていない拡張機構は推測に過ぎないため、自身で最初の拡張を作って機構を実証する。
+  1. 拡張は `sisho-desk`、リポジトリも `sisho-desk`、呼ぶ語は `desk`。(`workbench` は初心者が打つには長く、`shelf` と揃えて `desk` とした。)
+  2. `sisho tui` は廃止し、互換 alias は置かずに一度に移す。`tui` という語は空く。
+  3. ビルトインコマンドおよび既知のプログラム(`tomet`・`twrit`・`tandr`・`shelf`)は、同名の拡張よりも常に優先する。
+  4. 拡張は独立した子プロセスとして実行する。sisho は引数をそのまま渡し、端末を引き渡し、拡張の終了コードをそのまま返す(`sisho shelf` と同じ)。拡張にはバージョンを求めず、最低バージョンも設けない。
+  5. `sisho-desk` は `sisho` の crate に一切依存しない。唯一使っていた `$EDITOR` の起動(`crates/sisho-tui/src/lib.rs:535`)は `std::process::Command` に置き換える。
+  6. コードは振る舞いを変えずに移す(Explorer, Migration, BatchMeta, StructuralGrep の全タブを維持)。変更は "workbench" から "desk" への名称変更と `sisho-run` の除去のみ。
+  7. `sisho-desk` は `tomet-*` crate を git 依存として自前で固定する(`twrit` と同様)。別プロセスなので型共有の衝突は起きない。
 
 ===[ 動詞 ]
 

@@ -40,15 +40,15 @@ What `sisho tui` does now (Explorer, Migration, BatchMeta, StructuralGrep) edits
 
 This must land before Phase 4, or `sisho desk` has nothing to run.
 
-- [ ] In `app/src/commands/tool.rs`: when `program(word)` is `None`, run `sisho-<word>` the way a program is run now (`Step::new(..).args(..).run_inherited()`), with the same exit-code rules (`passthrough_code`).
+- [x] In `app/src/commands/tool.rs`: when `program(word)` is `None`, run `sisho-<word>` the way a program is run now (`Step::new(..).args(..).run_inherited()`), with the same exit-code rules (`passthrough_code`).
   - If the program is not found, keep today's behaviour for an unknown word: message on stderr, exit 2 (usage error). Do not exit 127 here; 127 stays for a *known* program that is not installed (`sisho tomet` without `tomet`).
   - Accept only words made of lowercase letters, digits and `-`, not starting with `-` (so `sisho ../x` or `sisho 'a/b'` is a usage error, never a path to run). Test it.
   - Do not scan `PATH`. `sisho-tools` is under the `tools-by-subprocess` guard (no `std::fs`); a plain run is enough and needs none.
-- [ ] Keep `sisho-tools::program()` as the table of known programs. The extension fallback lives in `app`, so the table stays a hand-written list.
-- [ ] Tests in `app/tests/tool.rs` with fake extensions on a `PATH` the test controls (see `app/tests/common`): arguments and flags unchanged; exit code kept; terminal/stdin handed over; unknown word and nothing on `PATH` exits 2; a built-in or known program wins over a `sisho-<same word>` on `PATH` (for example a fake `sisho-check` and `sisho-tomet` must never run); invalid words exit 2.
-- [ ] Help: the `Tool` command's doc comment and the error message in `tool.rs` say that `sisho-<word>` on `PATH` is also run.
-- [ ] Docs: a spec `tmtroot/spec/cli/extension.tmt` (`@meta{ id: cli.extension }`, English; look at `tmtroot/spec/cli/*.tmt` for the style) that states the contract in decisions 3 and 4. A short section in the design memo recording decisions 1 to 7 with the date 2026-10-20 and the reason (a reference extension is what proves the mechanism). Update `tmtroot/readme.tmt` (Usage). Run `just docs`, `just docs-check`.
-- [ ] `cargo test --workspace`, `cargo clippy --workspace -- -D warnings`, `twrit check .` clean.
+- [x] Keep `sisho-tools::program()` as the table of known programs. The extension fallback lives in `app`, so the table stays a hand-written list.
+- [x] Tests in `app/tests/tool.rs` with fake extensions on a `PATH` the test controls (see `app/tests/common`): arguments and flags unchanged; exit code kept; terminal/stdin handed over; unknown word and nothing on `PATH` exits 2; a built-in or known program wins over a `sisho-<same word>` on `PATH` (for example a fake `sisho-check` and `sisho-tomet` must never run); invalid words exit 2.
+- [x] Help: the `Tool` command's doc comment and the error message in `tool.rs` say that `sisho-<word>` on `PATH` is also run.
+- [x] Docs: a spec `tmtroot/spec/cli/extension.tmt` (`@meta{ id: cli.extension }`, English; look at `tmtroot/spec/cli/*.tmt` for the style) that states the contract in decisions 3 and 4. A short section in the design memo recording decisions 1 to 7 with the date 2026-10-20 and the reason (a reference extension is what proves the mechanism). Update `tmtroot/readme.tmt` (Usage). Run `just docs`, `just docs-check`.
+- [x] `cargo test --workspace`, `cargo clippy --workspace -- -D warnings`, `twrit check .` clean.
 
 ## Phase 2: the new repository `sisho-desk`
 
@@ -78,6 +78,7 @@ Only after Phases 1 to 3, and after the author has seen the parity check.
 - [ ] Delete `crates/sisho-tui`, `app/src/commands/tui.rs`, `app/tests/tui.rs`, the `Tui` variant and `TuiArgs` in `app/src/cli.rs`, its dispatch in `app/src/main.rs`, and `sisho-tui` from the workspace `Cargo.toml` and `app/Cargo.toml`.
 - [ ] Remove the workspace dependencies that nothing else uses any more, then check each against the remaining crates: `ratatui`, `crossterm`, `tree-sitter`, `tree-sitter-tomet`, `tomet-transform`, `tomet-tree`, `tomet-config`, `uuid`. (`sisho-vault` still uses `tomet-indexer`, `-markdown`, `-parser`, `-printer`, `-semantics`; verify the rest with `cargo tree`.) Update `Cargo.lock`.
 - [ ] Remove `tmtroot/spec/cli/tui.tmt` (it lives in `sisho-desk` now), and the `tui` line of the Usage and the `crates/sisho-tui` line of Workspace Layout in `tmtroot/readme.tmt`. Add `sisho desk` to Usage as the first extension. Regenerate with `just docs`.
+- [ ] `tmtroot/spec/cli/extension.tmt` lists `tui` among the built-in commands; remove it from that list when `sisho tui` is removed.
 - [ ] Design memo: a dated entry (2026-10-20 or the day it is done) saying where the TUI went and why; fix the older line about `tui` ("tui を sisho に移す") so it does not read as the final state.
 - [ ] Other repositories that name the old command: `../tomet/tmtroot/spec/cli/overview.tmt:77` says `sisho tui` takes `--config`; it becomes `sisho desk`. Search `../*` again before you finish (`grep -rIn -E 'sisho tui|tomet tui|sisho-tui'`, excluding `target/` and `tmtroot/deprecated/`); `../tomet/editors/zed/grammars/typedmark` is old and is left alone.
 - [ ] **Proposed edit to `.writ.tmt` (the author applies it):** remove `crates/sisho-tui` from layer 1 of `crate-layering`; in the prose of that rule, `sisho-serve` is the only crate kept apart for its stack and "terminal-UI" goes; in `tools-by-subprocess`, the list of crates that use the `tomet` crates loses `sisho-tui`. Put the exact diff in your report. Until the author applies it, `twrit check .` will complain about a missing workspace member; say so rather than working around it.

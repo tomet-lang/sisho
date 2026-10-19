@@ -9,32 +9,60 @@ use sisho_tools::{program, programs};
 
 use crate::USAGE_ERROR;
 
-/// `sisho <tool> ...`: run the tool with the rest of the command line.
+/// An extension word is made only of ASCII lowercase letters, digits, and
+/// hyphens, and does not start with a hyphen.
+fn is_valid_extension_word(word: &str) -> bool {
+    !word.is_empty()
+        && !word.starts_with('-')
+        && word
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+}
+
+/// `sisho <tool> ...`: run the tool or extension with the rest of the command line.
 ///
-/// `words` is what the command line held after `sisho`: the tool's name, then
-/// its arguments, untouched.
+/// `words` is what the command line held after `sisho`: the tool or extension's
+/// name, then its arguments, untouched.
 pub fn tool(words: &[OsString]) -> Result<ExitCode> {
     let Some((name, args)) = words.split_first() else {
         bail!("no tool given");
     };
-    let Some(program) = name.to_str().and_then(program) else {
-        eprintln!(
-            "sisho: `{}` is neither a command nor a tool\n  tools: {}\n  try `sisho --help`",
-            name.to_string_lossy(),
-            tool_names()
-        );
-        return Ok(ExitCode::from(USAGE_ERROR));
-    };
 
-    let status = Step::new(program.word(), program.program())
-        .args(args)
-        .run_inherited();
-    if let Status::NotFound = status {
-        eprintln!("sisho: {} is not on PATH", program.program());
-    } else if let Status::CouldNotStart { reason } = &status {
-        eprintln!("sisho: could not start {}: {reason}", program.program());
+    let word = name.to_str();
+    if let Some(program) = word.and_then(program) {
+        let status = Step::new(program.word(), program.program())
+            .args(args)
+            .run_inherited();
+        if let Status::NotFound = status {
+            eprintln!("sisho: {} is not on PATH", program.program());
+        } else if let Status::CouldNotStart { reason } = &status {
+            eprintln!("sisho: could not start {}: {reason}", program.program());
+        }
+        return Ok(ExitCode::from(passthrough_code(&status)));
     }
-    Ok(ExitCode::from(passthrough_code(&status)))
+
+    if let Some(word) = word.filter(|w| is_valid_extension_word(w)) {
+        let extension = format!("sisho-{word}");
+        let status = Step::new(word, &extension).args(args).run_inherited();
+        match &status {
+            Status::NotFound => {
+                // Fall through: an unknown word and a missing extension
+                // both report the same usage error (exit 2).
+            }
+            Status::CouldNotStart { reason } => {
+                eprintln!("sisho: could not start {extension}: {reason}");
+                return Ok(ExitCode::from(passthrough_code(&status)));
+            }
+            _ => return Ok(ExitCode::from(passthrough_code(&status))),
+        }
+    }
+
+    eprintln!(
+        "sisho: `{}` is neither a command nor a tool\n  tools: {}\n  an extension is a program named `sisho-<word>` on PATH\n  try `sisho --help`",
+        name.to_string_lossy(),
+        tool_names()
+    );
+    Ok(ExitCode::from(USAGE_ERROR))
 }
 
 /// The words that run a program, for messages.
@@ -83,5 +111,21 @@ mod tests {
             126
         );
         assert_eq!(passthrough_code(&Status::Signalled { signal: 9 }), 137);
+    }
+
+    #[test]
+    fn valid_extension_words_only_contain_allowed_characters() {
+        assert!(is_valid_extension_word("desk"));
+        assert!(is_valid_extension_word("sisho-desk"));
+        assert!(is_valid_extension_word("foo123"));
+        assert!(is_valid_extension_word("a-b-c-1"));
+
+        assert!(!is_valid_extension_word(""));
+        assert!(!is_valid_extension_word("-desk"));
+        assert!(!is_valid_extension_word("Desk"));
+        assert!(!is_valid_extension_word("a/b"));
+        assert!(!is_valid_extension_word("../x"));
+        assert!(!is_valid_extension_word("foo.bar"));
+        assert!(!is_valid_extension_word("foo bar"));
     }
 }

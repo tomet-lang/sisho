@@ -44,6 +44,8 @@ When the reader of the output goes away early (`sisho check-links | head`), `sis
 
 `sisho shelf ...` is the same pass-through to `tomet-shelf`, which builds and serves a site from a vault: `sisho shelf build`, `sisho shelf serve`. The word is the role and the program keeps its own name. `shelf` takes no part in `check` or `fix`.
 
+An extension is a program named `sisho-<word>` on `PATH`, run as `sisho <word> ...`. It is the same pass-through: `sisho` hands over the terminal, forwards all arguments and flags, and takes its exit code. Built-in commands and known tools always take precedence over an extension of the same name. An unknown word with no matching extension on `PATH` exits 2. The contract is written down under [tmtroot/spec/cli/extension.tmt](tmtroot/spec/cli/extension.tmt).
+
 ## With Nix
 
 Nothing in `sisho` needs Nix: it finds `tomet` and `twrit` on `PATH`, however they got there. For those who do use Nix, the flake brings the tools, so a repository imports `sisho` and nothing else for them:

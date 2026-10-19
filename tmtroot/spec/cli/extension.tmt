@@ -1,0 +1,28 @@
+@meta{
+  id: cli.extension
+}
+
+`sisho <word> ...`: run an extension named `sisho-<word>` found on `PATH` with the rest of the command line.
+
+Status: implemented. Written 2026-10-20.
+
+=[ Overview ]
+
+`sisho` is extended by programs on `PATH` named `sisho-<word>`, executed as `sisho <word>`. This allows third-party tools and standalone extensions to integrate cleanly into the `sisho` command-line interface without modifying `sisho` itself.
+
+=[ Precedence ]
+
+Built-in commands (`check`, `fix`, `check-links`, `convert`, `serve`, `tui`) and known programs (`tomet`, `twrit`, `tandr`, `shelf`) always win over an extension of the same word. An executable named `sisho-check` or `sisho-tomet` on `PATH` will never be invoked by `sisho`.
+
+=[ Contract ]
+
+1. **Subprocess execution**: An extension is executed as an independent subprocess. It does not link any `sisho` crates.
+2. **Transparent pass-through**: `sisho` passes all remaining arguments and flags unchanged, hands over the controlling terminal (standard input, standard output, and standard error), and adopts the extension's exit status.
+3. **No version checks**: `sisho` does not query an extension for `--version` and enforces no minimum version requirement (the same contract as `sisho shelf`).
+4. **Allowed word format**: An extension word must consist only of ASCII lowercase letters, digits, and hyphens (`-`), and must not start with a hyphen. Words containing uppercase letters, path separators (`/`), or relative references (`../`) are rejected immediately as usage errors (exit 2).
+5. **Lookup & Exit codes**:
+   - `sisho` does not scan directories on `PATH`; it directly executes `sisho-<word>`.
+   - If no matching executable is found on `PATH`, `sisho` prints an error to standard error explaining that `<word>` is neither a command nor a tool, and exits with 2 (usage error). It does not exit 127 here (127 is reserved for known tools like `tomet` that are not installed).
+   - If the extension executable exists but cannot be started (e.g. permission denied), `sisho` exits 126.
+   - If the extension is terminated by a signal, `sisho` exits with 128 plus the signal number.
+   - Otherwise, `sisho` exits with the extension's exit code.

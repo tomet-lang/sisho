@@ -74,9 +74,10 @@ pub enum Command {
     /// It takes over the terminal until you quit, and puts it back however
     /// it ends.
     Tui(TuiArgs),
-    /// Run a tool with the rest of the command line, unchanged: `sisho tomet
-    /// format -i .` is `tomet format -i .`. `sisho shelf build` is
-    /// `tomet-shelf build`.
+    /// Run a tool or extension with the rest of the command line, unchanged:
+    /// `sisho tomet format -i .` is `tomet format -i .`. `sisho shelf build` is
+    /// `tomet-shelf build`. An extension `sisho-<word>` found on `PATH` is run
+    /// as `sisho <word>`.
     ///
     /// The tool gets the terminal and its exit code becomes sisho's. A tool
     /// that is not installed exits 127, one that cannot be started 126, one
