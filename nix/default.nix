@@ -20,6 +20,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
       tometPkgs = inputs.tomet.packages.${system};
       twritPkgs = inputs.twrit.packages.${system};
       shelfPkgs = inputs.tomet-shelf.packages.${system};
+      deskPkgs = inputs.sisho-desk.packages.${system};
 
       # Several packages as one: the `bin/` of each in a single directory.
       combine =
@@ -38,12 +39,14 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         inherit (tometPkgs) tomet tomet-lsp;
         inherit (twritPkgs) twrit;
         inherit (shelfPkgs) tomet-shelf;
+        inherit (deskPkgs) sisho-desk;
 
         # The core: what `sisho check` and `sisho fix` run. Add the rest with `combine`.
         toolchain = combine [
           sisho
           tomet
           twrit
+          sisho-desk
         ];
       };
 

@@ -144,6 +144,7 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - 3 つのツールのロックを、最新の sisho へ作り直す必要はなく、作り直しても落ち着く点がない(一方を進めると、もう一方の固定が古くなる)。各リポジトリは、固定している版の sisho を使う。
 - twrit の AGENTS.md にあった「tomet の flake が twrit を、twrit の flake が tomet を取り込む」という説明は、sisho 経由に書き直した。
 - `github:tomet-lang/tomet-writ`(twrit の旧名)を指していた入力は、この切り替えでなくなった。
+- (2026-10-20、利用者と決めた。)初期の TUI (`sisho tui`) を独立リポジトリ `sisho-desk` (`sisho desk`) へ切り出したことに伴い、`toolchain` に `sisho-desk` を加えた (`sisho`・`tomet`・`twrit`・`sisho-desk` の 4 つ)。初心者が `sisho desk` と叩いたときに別のパッケージの追加なしで届くようにするため。`sisho-desk` の flake 入力のうち開発用ツール (`tomet` と `twrit`) は、sisho の側で `inputs.tomet.follows = ""`・`inputs.twrit.follows = ""` として切る。nixpkgs・crane・fenix は自前のものを保ち、バイナリキャッシュを活かす。sisho の `flake.lock` は 32 ノードから 40 ノードになった (sisho-desk 自身のノードと開発用以外の入力分で +8)。
 
 ==[ 移すときに直す場所 ]
 

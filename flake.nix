@@ -47,6 +47,11 @@
       inputs.twrit.follows = "";
       inputs.sisho.follows = "";
     };
+    sisho-desk = {
+      url = "github:tomet-lang/sisho-desk";
+      inputs.tomet.follows = "";
+      inputs.twrit.follows = "";
+    };
   };
 
   outputs = inputs: import ./nix inputs;

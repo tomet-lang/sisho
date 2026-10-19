@@ -54,10 +54,10 @@ Nothing in `sisho` needs Nix: it finds `tomet` and `twrit` on `PATH`, however th
 inputs.sisho.url = "github:tomet-lang/sisho";
 
 # in a dev shell:
-packages = [ sisho.packages.${system}.toolchain ];   # sisho, tomet and twrit
+packages = [ sisho.packages.${system}.toolchain ];   # sisho, tomet, twrit and sisho-desk
 ```
 
-Packages are `sisho`, `tomet`, `tomet-lsp`, `twrit` and `tomet-shelf`. `toolchain` bundles the core: `sisho`, `tomet` and `twrit`. To choose your own set, as with fenix:
+Packages are `sisho`, `tomet`, `tomet-lsp`, `twrit`, `tomet-shelf` and `sisho-desk`. `toolchain` bundles the core: `sisho`, `tomet`, `twrit` and `sisho-desk`. To choose your own set, as with fenix:
 
 ```nix
 sisho.legacyPackages.${system}.combine [

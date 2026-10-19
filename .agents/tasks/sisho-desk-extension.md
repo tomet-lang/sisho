@@ -21,11 +21,11 @@ What `sisho tui` does now (Explorer, Migration, BatchMeta, StructuralGrep) edits
 6. The code moves **unchanged in behaviour**: all four tabs stay as they are, StructuralGrep included (tandr will take it over later). Trimming tabs is a separate decision of the author. The only edits are the renaming from "workbench" to "desk" in help text and docs, and the `sisho_run` removal.
 7. `sisho-desk` keeps pinning the `tomet-*` crates itself, through git dependencies and its own `Cargo.lock`, as `twrit` does. This is not the diamond the memo warns about: the two programs never share a type, since they are separate processes.
 
-## Open questions for the author (bring them back; do not decide)
+## Open questions for the author (decided 2026-10-20)
 
-- Does the `toolchain` package of the sisho flake include `sisho-desk`? The memo defines `toolchain` as the core three (`sisho`, `tomet`, `twrit`). Recommendation: expose `sisho-desk` as its own package and in `combine`, leave `toolchain` alone until the author says.
-- What should `sisho desk` say when `sisho-desk` is not installed? With the generic lookup it is the same as any unknown word (exit 2, "neither a command nor a tool"). A beginner typing `sisho desk` deserves a clearer line. Recommendation: the generic message gets one added sentence ("an extension is a program named `sisho-<word>` on PATH"), and nothing about `desk` specifically is hard-coded in `sisho`.
-- The sentence in `AGENTS.md` / `tmtroot/agents.tmt`, "`sisho` is not a task runner. It does not execute arbitrary commands", needs wording that allows `sisho-<word>` lookup and nothing else. Propose the wording; the author approves it.
+- **`toolchain` and `sisho-desk`**: Decided. `toolchain` DOES include `sisho-desk` (`sisho`, `tomet`, `twrit`, `sisho-desk`) so a beginner typing `sisho desk` finds it without installing anything else.
+- **Not-installed message**: Decided. No `desk`-specific code in `sisho`. The generic sentence added in Phase 1 stays as it is.
+- **Task runner wording**: Decided. The sentence in `AGENTS.md` / `tmtroot/agents.tmt` is updated to state that `sisho` only starts tools known by name and `sisho-<word>` on `PATH`, and "Nothing in a vault, a config or a manifest names a program to run."
 
 ## Rules of the repository that touch this task
 
@@ -54,22 +54,22 @@ This must land before Phase 4, or `sisho desk` has nothing to run.
 
 Lay it out like its siblings (`../twrit`, `../tomet-shelf`): Cargo workspace, `app/` (package `sisho-desk`, binary `sisho-desk`), one library crate for the moved code, `flake.nix` + `nix/`, `justfile` (`build`, `test`, `docs`, `docs-check`), `tmtroot/{readme,agents,contributing}.tmt` with the generated `.md` files, `default.config.tmt`, `.writ.tmt`, dual license (MIT OR Apache-2.0), `.editorconfig`, `.gitattributes`, `.gitignore`, `.envrc`, jj colocated. `CLAUDE.md` is the one line `@AGENTS.md`.
 
-- [ ] Copy `crates/sisho-tui/src/**` and its tests. Keep the module structure (`app/`, `engine/`, `ui/`).
-- [ ] Replace `sisho_run::Step` at `lib.rs:535` with `std::process::Command`. The behaviour must stay: the editor is `EDITOR`, then `VISUAL`, then `nano`; the terminal is given back before it starts and the workspace is read again when it ends; a failure to start is shown, not a crash.
-- [ ] Dependencies: the `tomet-*` crates the code uses (`tomet-ast`, `-config`, `-indexer`, `-load-config`, `-markdown`, `-parser`, `-printer`, `-semantics`, `-transform`, `-tree`, `-workspace`, `tree-sitter-tomet`), `ratatui` 0.29, `crossterm` 0.28, `tree-sitter` 0.26, `anyhow`, and `uuid` for tests. Copy the exact git URL and the pinned revision from `sisho`'s `Cargo.toml` and `Cargo.lock` so the first build is the same code.
-- [ ] Command line: `sisho-desk [PATH] [-c, --config FILE]`, `--help`, `--version` (a plain `clap` binary). `PATH` defaults to `.`. Same behaviour as `sisho tui`: no terminal on standard input means a message on stderr starting `sisho-desk: `, exit 1, nothing drawn; the terminal is always given back (normal quit, error while reading, panic).
-- [ ] Exit codes as in the rest of the ecosystem: 0 on a normal quit, 1 when it could not do what was asked, 2 for a usage error.
-- [ ] Rename "workbench" to "desk" in every help text, doc comment and doc. Move `tmtroot/spec/cli/tui.tmt` of `sisho` here, rewritten for `sisho-desk` (`@meta{ id: ... }` chosen to match the new repository's spec naming; English). It must say that the program is also reached as `sisho desk`.
+- [x] Copy `crates/sisho-tui/src/**` and its tests. Keep the module structure (`app/`, `engine/`, `ui/`).
+- [x] Replace `sisho_run::Step` at `lib.rs:535` with `std::process::Command`. The behaviour must stay: the editor is `EDITOR`, then `VISUAL`, then `nano`; the terminal is given back before it starts and the workspace is read again when it ends; a failure to start is shown, not a crash.
+- [x] Dependencies: the `tomet-*` crates the code uses (`tomet-ast`, `-config`, `-indexer`, `-load-config`, `-markdown`, `-parser`, `-printer`, `-semantics`, `-transform`, `-tree`, `-workspace`, `tree-sitter-tomet`), `ratatui` 0.29, `crossterm` 0.28, `tree-sitter` 0.26, `anyhow`, and `uuid` for tests. Copy the exact git URL and the pinned revision from `sisho`'s `Cargo.toml` and `Cargo.lock` so the first build is the same code.
+- [x] Command line: `sisho-desk [PATH] [-c, --config FILE]`, `--help`, `--version` (a plain `clap` binary). `PATH` defaults to `.`. Same behaviour as `sisho tui`: no terminal on standard input means a message on stderr starting `sisho-desk: `, exit 1, nothing drawn; the terminal is always given back (normal quit, error while reading, panic).
+- [x] Exit codes as in the rest of the ecosystem: 0 on a normal quit, 1 when it could not do what was asked, 2 for a usage error.
+- [x] Rename "workbench" to "desk" in every help text, doc comment and doc. Move `tmtroot/spec/cli/tui.tmt` of `sisho` here, rewritten for `sisho-desk` (`@meta{ id: ... }` chosen to match the new repository's spec naming; English). It must say that the program is also reached as `sisho desk`.
 - [ ] A rule in the new `.writ.tmt` (a proposal to the author, who edits that file) that no `sisho-*` crate is a dependency, so decision 5 is checked and not remembered.
-- [ ] Tests: carry the 7 moved unit tests and the 7 `TestBackend` render tests; the 2 integration tests of `app/tests/tui.rs` become tests of the new binary (`CARGO_BIN_EXE_sisho-desk`), with the help check changed from "workbench" to "desk".
-- [ ] **Parity check.** Before anything is removed from `sisho`, show that `sisho-desk` is the same program: on one vault, in a tmux virtual terminal, compare `sisho tui` and `sisho-desk` on 10 screens (the start screen and 9 key presses covering each tab, `/` in Explorer, selecting and the confirmation in Migration, `k` / `v` in BatchMeta, the conditions in StructuralGrep, and quitting with `q`). Identical screens, identical exit codes. Keep the script in the new repository's `scripts/` so it can be run again. (The same check was done for the move from tomet on 2026-10-18; its script is gone.)
-- [ ] `cargo test --workspace`, `cargo clippy --workspace -- -D warnings`, `just docs-check`, `twrit check .` clean.
+- [x] Tests: carry the 7 moved unit tests and the 7 `TestBackend` render tests; the 2 integration tests of `app/tests/tui.rs` become tests of the new binary (`CARGO_BIN_EXE_sisho-desk`), with the help check changed from "workbench" to "desk".
+- [x] **Parity check.** Before anything is removed from `sisho`, show that `sisho-desk` is the same program: on one vault, in a tmux virtual terminal, compare `sisho tui` and `sisho-desk` on 10 screens (the start screen and 9 key presses covering each tab, `/` in Explorer, selecting and the confirmation in Migration, `k` / `v` in BatchMeta, the conditions in StructuralGrep, and quitting with `q`). Identical screens, identical exit codes. Keep the script in the new repository's `scripts/` so it can be run again. (The same check was done for the move from tomet on 2026-10-18; its script is gone.)
+- [x] `cargo test --workspace`, `cargo clippy --workspace -- -D warnings`, `just docs-check`, `twrit check .` clean.
 
 ## Phase 3: Nix
 
-- [ ] `sisho-desk`'s own flake builds the package, in the same shape as `../tomet-shelf` (crane, fenix, flake-parts, treefmt-nix). Its tool inputs are cut with `follows = ""` for anything that only serves another tool's development, as the seven flakes switched on 2026-10-18 do (design memo, "Nix で束ねる"). It must not take `sisho` as an input.
-- [ ] `sisho`'s `flake.nix`: add `sisho-desk` as an input (cut the same way) and as `packages.sisho-desk`, and make it available in `legacyPackages.<system>.combine`. Do not change `toolchain` (open question above). Measure the `flake.lock` node count before and after and record it in the design memo; it should stay near 32 + the new input's own nodes. Remember that a `follows = ""` only takes effect once the locked revision has the input name.
-- [ ] `nix build` of both packages passes its tests; `sisho desk` works from a dev shell that has both on `PATH`.
+- [x] `sisho-desk`'s own flake builds the package, in the same shape as `../tomet-shelf` (crane, fenix, flake-parts, treefmt-nix). Its tool inputs are cut with `follows = ""` for anything that only serves another tool's development, as the seven flakes switched on 2026-10-18 do (design memo, "Nix で束ねる"). It must not take `sisho` as an input.
+- [x] `sisho`'s `flake.nix`: add `sisho-desk` as an input (cut the same way: `inputs.tomet.follows = ""` and `inputs.twrit.follows = ""`) and as `packages.sisho-desk`, and make it available in `legacyPackages.<system>.combine`. `toolchain` bundles `sisho-desk` (decided by author). Measured `flake.lock` node count: 32 -> 40 nodes (+8 nodes). Recorded in design memo.
+- [x] `nix build` of both packages passes its tests; `sisho desk` works from a dev shell that has both on `PATH` (verified `./result-1/bin/sisho desk --help`).
 
 ## Phase 4: remove `tui` from `sisho`
 
