@@ -19,7 +19,7 @@ does not relax the rule to fit the change it wanted to make.
 
   layers: {
     2: list( "app" )
-    1: list( "crates/sisho-tools", "crates/sisho-vault", "crates/sisho-serve", "crates/sisho-tui" )
+    1: list( "crates/sisho-tools", "crates/sisho-vault", "crates/sisho-serve" )
     0: list( "crates/sisho-run" )
   }
 }
@@ -30,10 +30,10 @@ upward ones are not.
 
 Layer 0 runs commands and knows no tool by name. Layer 1 holds what `sisho`
 knows about the core tools (`sisho-tools`) and what it implements itself
-(`sisho-vault`, `sisho-serve`, `sisho-tui`). Layer 2 is the program.
+(`sisho-vault`, `sisho-serve`). Layer 2 is the program.
 
-`sisho-serve` and `sisho-tui` are their own crates so that the HTTP and
-terminal-UI stacks stay out of the build of every other command.
+`sisho-serve` is its own crate so that the HTTP stack stays out of the
+build of every other command.
 
 Dev-dependencies are exempt.
 
@@ -61,8 +61,8 @@ external crate except what is in the allowlist: `jobserver` and what it brings
 in (`libc`, `getrandom`, `cfg-if`, `r-efi`). None of it is a `tomet-*` crate;
 a `jobserver` update may change the list.
 
-Only what `sisho` implements itself -- `sisho-vault`, `sisho-serve`,
-`sisho-tui` -- uses the `tomet` crates, through git dependencies.
+Only what `sisho` implements itself -- `sisho-vault`, `sisho-serve` --
+uses the `tomet` crates, through git dependencies.
 
 ---[ Why ]---
 

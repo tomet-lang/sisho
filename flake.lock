@@ -538,11 +538,11 @@
         "twrit": []
       },
       "locked": {
-        "lastModified": 1792448792,
-        "narHash": "sha256-f3v7d/8bPaxeXUyDuhMT92Moea1f85BU+JNY2qa3IFU=",
+        "lastModified": 1792451086,
+        "narHash": "sha256-mx+iTMbtuxot1Z66JrNrcTHLZR/4/C2WN+imPUoJvI8=",
         "owner": "tomet-lang",
         "repo": "sisho-desk",
-        "rev": "e1ab8c64dc96a018fcf9bffa7a4cfd5c04e39e65",
+        "rev": "ec296442dc9b70b5df32080d3a04f44a552b27c4",
         "type": "github"
       },
       "original": {

@@ -11,7 +11,6 @@ pub mod convert;
 pub mod fix;
 pub mod serve;
 pub mod tool;
-pub mod tui;
 
 use std::io::{self, Write};
 use std::process::ExitCode;

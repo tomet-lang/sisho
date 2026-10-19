@@ -10,9 +10,11 @@ Status: implemented. Written 2026-10-20.
 
 `sisho` is extended by programs on `PATH` named `sisho-<word>`, executed as `sisho <word>`. This allows third-party tools and standalone extensions to integrate cleanly into the `sisho` command-line interface without modifying `sisho` itself.
 
+The top-level `sisho --help` mentions extensions at the end: "Extensions: a program named `sisho-<word>` on PATH runs as `sisho <word>`, for example `sisho desk`."
+
 =[ Precedence ]
 
-Built-in commands (`check`, `fix`, `check-links`, `convert`, `serve`, `tui`) and known programs (`tomet`, `twrit`, `tandr`, `shelf`) always win over an extension of the same word. An executable named `sisho-check` or `sisho-tomet` on `PATH` will never be invoked by `sisho`.
+Built-in commands (`check`, `fix`, `check-links`, `convert`, `serve`) and known programs (`tomet`, `twrit`, `tandr`, `shelf`) always win over an extension of the same word. An executable named `sisho-check` or `sisho-tomet` on `PATH` will never be invoked by `sisho`.
 
 =[ Contract ]
 

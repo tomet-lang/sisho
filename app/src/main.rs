@@ -22,7 +22,7 @@ const USAGE_ERROR: u8 = 2;
 fn main() -> ExitCode {
     let matches = Cli::command()
         .after_help(format!(
-            "Tools: {}\n`sisho <tool> ...` runs the tool with the rest of the command line.",
+            "Tools: {}\n`sisho <tool> ...` runs the tool with the rest of the command line.\nExtensions: a program named `sisho-<word>` on PATH runs as `sisho <word>`, for example `sisho desk`.",
             commands::tool::tool_names()
         ))
         .get_matches();
@@ -41,7 +41,6 @@ fn main() -> ExitCode {
         Command::Fix(args) => commands::fix::fix(args),
         Command::CheckLinks(args) => Ok(commands::check_links::check_links(args)),
         Command::Serve(args) => Ok(commands::serve::serve(args)),
-        Command::Tui(args) => Ok(commands::tui::tui(args)),
         Command::Convert(args) => match commands::convert::convert_direction(args) {
             Ok(direction) => Ok(commands::convert::convert(args, &direction)),
             Err((kind, message)) => Cli::command().error(kind, message).exit(),

@@ -89,6 +89,12 @@ fn the_help_names_every_tool() {
     let sandbox = Sandbox::new("help").both_tools();
     let text = stdout(&sandbox.sisho(&["--help"], ""));
     assert!(text.contains("Tools: tomet, twrit"), "{text}");
+    assert!(
+        text.contains(
+            "Extensions: a program named `sisho-<word>` on PATH runs as `sisho <word>`, for example `sisho desk`."
+        ),
+        "{text}"
+    );
 }
 
 #[test]
