@@ -36,6 +36,11 @@ fn main() -> ExitCode {
         return extension::list(cli.all);
     }
 
+    if let Err(error) = init_jobserver(cli.jobs.map(|n| n.get())) {
+        eprintln!("sisho: {error:#}");
+        return ExitCode::from(OWN_ERROR);
+    }
+
     let Some(command) = &cli.command else {
         use std::io::IsTerminal;
         if std::io::stdin().is_terminal() && std::io::stdout().is_terminal() {
@@ -74,11 +79,6 @@ fn main() -> ExitCode {
         println!();
         return ExitCode::from(USAGE_ERROR);
     };
-
-    if let Err(error) = init_jobserver(cli.jobs.map(|n| n.get())) {
-        eprintln!("sisho: {error:#}");
-        return ExitCode::from(OWN_ERROR);
-    }
 
     let result = match command {
         Command::Check(args) => commands::check::check(args),

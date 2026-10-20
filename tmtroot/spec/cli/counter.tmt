@@ -31,3 +31,4 @@ It does not edit documents: document editing and migrations belong to `sisho des
 
 - **Non-terminal execution**: If standard input or standard output is not a terminal (e.g. a pipe or automated script), `sisho` never opens the screen and instead prints command-line help as before.
 - **Terminal Restoration**: An RAII screen guard and panic hook guarantee that raw mode is disabled and the alternate screen is exited upon any termination (normal exit, error, or panic).
+- **Instant Launch & Background Execution**: The counter opens and draws its initial frame immediately upon launch without blocking on full vault checks. Integrity verification and link scanning run asynchronously in background worker threads, streaming results and animating status spinners on the Board and Counter as checks complete.

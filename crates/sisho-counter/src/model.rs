@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::mpsc::{self, Receiver, Sender};
 
 use sisho_run::{Outcome, run_parallel};
 use sisho_tools::{Tool, Verdict, check_steps, fix_steps};
@@ -21,6 +22,13 @@ pub struct ToolStatus {
     pub verdict: Verdict,
 }
 
+/// Messages sent from background threads to the model.
+pub enum WorkerMessage {
+    ChecksDone(Vec<Outcome>),
+    LinksDone(Result<Report, String>),
+    FixesDone(Vec<Outcome>),
+}
+
 /// The state of the counter and board.
 pub struct Model {
     pub dir: PathBuf,
@@ -31,10 +39,17 @@ pub struct Model {
     pub selected_step: usize,
     pub confirm_fix: bool,
     pub message: Option<String>,
+    pub is_checking: bool,
+    pub is_checking_links: bool,
+    pub is_fixing: bool,
+    pub tick: usize,
+    pub sender: Sender<WorkerMessage>,
+    pub receiver: Receiver<WorkerMessage>,
 }
 
 impl Model {
     pub fn new(dir: PathBuf, extensions: Vec<ExtensionItem>) -> Self {
+        let (sender, receiver) = mpsc::channel();
         let mut model = Self {
             dir,
             tools: Vec::new(),
@@ -43,7 +58,13 @@ impl Model {
             links_report: None,
             selected_step: 0,
             confirm_fix: false,
-            message: None,
+            message: Some("Running checks...".to_string()),
+            is_checking: false,
+            is_checking_links: false,
+            is_fixing: false,
+            tick: 0,
+            sender,
+            receiver,
         };
         model.refresh_tools();
         model.run_check_links();
@@ -51,7 +72,7 @@ impl Model {
         model
     }
 
-    /// Refresh tools information and version status.
+    /// Refresh tools information and version status synchronously.
     pub fn refresh_tools(&mut self) {
         let mut statuses = Vec::new();
         for tool in Tool::ALL {
@@ -72,42 +93,90 @@ impl Model {
         self.tools = statuses;
     }
 
-    /// Run the check steps suite across the project.
+    /// Run the check steps suite across the project in a background thread.
     pub fn run_checks(&mut self) {
-        let steps = check_steps(&self.dir);
-        let jobs = steps.iter().map(sisho_run::Job::step).collect();
-        let outcomes = run_parallel(jobs);
-        self.check_outcomes = outcomes;
-        if self.selected_step >= self.check_outcomes.len() {
-            self.selected_step = 0;
+        if self.is_checking || self.is_fixing {
+            return;
         }
-        self.message = Some("Checks completed.".to_string());
+        self.is_checking = true;
+        self.message = Some("Running checks...".to_string());
+        let dir = self.dir.clone();
+        let sender = self.sender.clone();
+        std::thread::spawn(move || {
+            let steps = check_steps(&dir);
+            let jobs = steps.iter().map(sisho_run::Job::step).collect();
+            let outcomes = run_parallel(jobs);
+            let _ = sender.send(WorkerMessage::ChecksDone(outcomes));
+        });
     }
 
-    /// Run the fix steps suite across the project.
+    /// Run the fix steps suite across the project in a background thread.
     pub fn run_fixes(&mut self) {
-        let steps = fix_steps(&self.dir);
-        let mut outcomes = Vec::new();
-        for step in steps {
-            outcomes.push(step.run());
+        if self.is_fixing || self.is_checking {
+            return;
         }
-        self.check_outcomes = outcomes;
-        if self.selected_step >= self.check_outcomes.len() {
-            self.selected_step = 0;
-        }
+        self.is_fixing = true;
         self.confirm_fix = false;
-        self.message = Some("Fixes applied. Run check to verify.".to_string());
+        self.message = Some("Applying fixes...".to_string());
+        let dir = self.dir.clone();
+        let sender = self.sender.clone();
+        std::thread::spawn(move || {
+            let steps = fix_steps(&dir);
+            let mut outcomes = Vec::new();
+            for step in steps {
+                outcomes.push(step.run());
+            }
+            let _ = sender.send(WorkerMessage::FixesDone(outcomes));
+        });
     }
 
-    /// Run check-links verification on the project directory.
+    /// Run check-links verification on the project directory in a background thread.
     pub fn run_check_links(&mut self) {
-        let cache_path = sisho_vault::links::default_cache_path();
-        match check_links(&self.dir, &cache_path) {
-            Ok(report) => {
-                self.links_report = Some(report);
-            }
-            Err(err) => {
-                self.message = Some(format!("check-links error: {err}"));
+        if self.is_checking_links {
+            return;
+        }
+        self.is_checking_links = true;
+        let dir = self.dir.clone();
+        let sender = self.sender.clone();
+        std::thread::spawn(move || {
+            let cache_path = sisho_vault::links::default_cache_path();
+            let res = check_links(&dir, &cache_path).map_err(|e| e.to_string());
+            let _ = sender.send(WorkerMessage::LinksDone(res));
+        });
+    }
+
+    /// Poll any messages from background worker threads and update model state.
+    pub fn poll_background(&mut self) {
+        self.tick = self.tick.wrapping_add(1);
+        while let Ok(msg) = self.receiver.try_recv() {
+            match msg {
+                WorkerMessage::ChecksDone(outcomes) => {
+                    self.check_outcomes = outcomes;
+                    self.is_checking = false;
+                    if self.selected_step >= self.check_outcomes.len() {
+                        self.selected_step = 0;
+                    }
+                    self.message = Some("Checks completed.".to_string());
+                }
+                WorkerMessage::LinksDone(res) => {
+                    self.is_checking_links = false;
+                    match res {
+                        Ok(report) => {
+                            self.links_report = Some(report);
+                        }
+                        Err(err) => {
+                            self.message = Some(format!("check-links error: {err}"));
+                        }
+                    }
+                }
+                WorkerMessage::FixesDone(outcomes) => {
+                    self.check_outcomes = outcomes;
+                    self.is_fixing = false;
+                    if self.selected_step >= self.check_outcomes.len() {
+                        self.selected_step = 0;
+                    }
+                    self.message = Some("Fixes applied. Run check to verify.".to_string());
+                }
             }
         }
     }

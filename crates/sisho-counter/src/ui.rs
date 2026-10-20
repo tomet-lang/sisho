@@ -138,51 +138,79 @@ fn draw_tools_and_extensions(f: &mut Frame, area: Rect, model: &Model) {
     f.render_widget(list, area);
 }
 
+const SPINNER: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+fn spinner(tick: usize) -> &'static str {
+    SPINNER[tick % SPINNER.len()]
+}
+
 fn draw_broken_links(f: &mut Frame, area: Rect, model: &Model) {
     let broken = model.broken_links();
     let mut items = Vec::new();
 
-    if let Some(report) = &model.links_report {
-        items.push(ListItem::new(Line::from(vec![Span::styled(
-            format!(
-                "Scanned {} files ({} links checked)",
-                report.files_scanned, report.links_checked
+    if model.is_checking_links && model.links_report.is_none() {
+        let spin = spinner(model.tick);
+        items.push(ListItem::new(Line::from(vec![
+            Span::styled(format!("  {spin} "), Style::default().fg(Color::Cyan)),
+            Span::styled(
+                "Scanning links in background...",
+                Style::default().fg(Color::Yellow),
             ),
-            Style::default().fg(Color::DarkGray),
-        )])));
-    }
-
-    if broken.is_empty() {
-        items.push(ListItem::new(Line::from(vec![Span::styled(
-            "✓ No broken links found",
-            Style::default().fg(Color::Green),
-        )])));
+        ])));
     } else {
-        for link in broken {
-            let at_str = link.at.map(|p| format!(":{}", p.line)).unwrap_or_default();
-            items.push(ListItem::new(Line::from(vec![
-                Span::styled("✗ ", Style::default().fg(Color::Red)),
-                Span::styled(
-                    format!("{}{at_str}", link.source.display()),
-                    Style::default().fg(Color::White),
+        if let Some(report) = &model.links_report {
+            items.push(ListItem::new(Line::from(vec![Span::styled(
+                format!(
+                    "Scanned {} files ({} links checked)",
+                    report.files_scanned, report.links_checked
                 ),
-                Span::raw(format!(" -> {}", link.target)),
-            ])));
+                Style::default().fg(Color::DarkGray),
+            )])));
+        }
+
+        if broken.is_empty() {
+            items.push(ListItem::new(Line::from(vec![Span::styled(
+                "✓ No broken links found",
+                Style::default().fg(Color::Green),
+            )])));
+        } else {
+            for link in broken {
+                let at_str = link.at.map(|p| format!(":{}", p.line)).unwrap_or_default();
+                items.push(ListItem::new(Line::from(vec![
+                    Span::styled("✗ ", Style::default().fg(Color::Red)),
+                    Span::styled(
+                        format!("{}{at_str}", link.source.display()),
+                        Style::default().fg(Color::White),
+                    ),
+                    Span::raw(format!(" -> {}", link.target)),
+                ])));
+            }
         }
     }
 
-    let list = List::new(items).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title(format!(" Broken Links ({}) ", broken.len())),
-    );
+    let title = if model.is_checking_links {
+        " Broken Links (scanning...) ".to_string()
+    } else {
+        format!(" Broken Links ({}) ", broken.len())
+    };
+
+    let list = List::new(items).block(Block::default().borders(Borders::ALL).title(title));
     f.render_widget(list, area);
 }
 
 fn draw_right_column(f: &mut Frame, area: Rect, model: &Model) {
+    // Number of check command items + top/bottom borders (2 lines).
+    let cmd_count = if model.check_outcomes.is_empty() {
+        sisho_tools::check_steps(&model.dir).len()
+    } else {
+        model.check_outcomes.len()
+    };
+    let border_lines = 2;
+    let height = (cmd_count as u16) + border_lines;
+
     let rows = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .constraints([Constraint::Max(height), Constraint::Min(0)])
         .split(area);
 
     draw_checks(f, rows[0], model);
@@ -193,7 +221,27 @@ fn draw_checks(f: &mut Frame, area: Rect, model: &Model) {
     let mut items = Vec::new();
 
     if model.check_outcomes.is_empty() {
-        items.push(ListItem::new(Line::from("No checks run yet. Press [c].")));
+        if model.is_checking {
+            let spin = spinner(model.tick);
+            items.push(ListItem::new(Line::from(vec![
+                Span::styled(format!("  {spin} "), Style::default().fg(Color::Cyan)),
+                Span::styled(
+                    "Running checks in background...",
+                    Style::default().fg(Color::Yellow),
+                ),
+            ])));
+        } else if model.is_fixing {
+            let spin = spinner(model.tick);
+            items.push(ListItem::new(Line::from(vec![
+                Span::styled(format!("  {spin} "), Style::default().fg(Color::Cyan)),
+                Span::styled(
+                    "Applying fixes in background...",
+                    Style::default().fg(Color::Yellow),
+                ),
+            ])));
+        } else {
+            items.push(ListItem::new(Line::from("No checks run yet. Press [c].")));
+        }
     } else {
         for (i, outcome) in model.check_outcomes.iter().enumerate() {
             let is_selected = i == model.selected_step;
@@ -237,11 +285,15 @@ fn draw_checks(f: &mut Frame, area: Rect, model: &Model) {
         }
     }
 
-    let list = List::new(items).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title(" Integrity & Checks "),
-    );
+    let title = if model.is_checking {
+        " Integrity & Checks (running...) "
+    } else if model.is_fixing {
+        " Integrity & Checks (fixing...) "
+    } else {
+        " Integrity & Checks "
+    };
+
+    let list = List::new(items).block(Block::default().borders(Borders::ALL).title(title));
     f.render_widget(list, area);
 }
 
@@ -350,8 +402,21 @@ fn draw_counter(f: &mut Frame, area: Rect, model: &Model) {
         ]));
 
         if let Some(msg) = &model.message {
+            let is_busy = model.is_checking || model.is_checking_links || model.is_fixing;
+            let status_prefix = if is_busy {
+                format!("status: {} ", spinner(model.tick))
+            } else {
+                "status: ".to_string()
+            };
             lines.push(Line::from(vec![
-                Span::styled("status: ", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    status_prefix,
+                    if is_busy {
+                        Style::default().fg(Color::Cyan)
+                    } else {
+                        Style::default().fg(Color::DarkGray)
+                    },
+                ),
                 Span::styled(msg, Style::default().fg(Color::White)),
             ]));
         }

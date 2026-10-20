@@ -25,9 +25,10 @@ pub fn run(dir: PathBuf, extensions: Vec<ExtensionItem>) -> anyhow::Result<()> {
     let mut model = Model::new(dir, extensions);
 
     loop {
+        model.poll_background();
         screen.terminal.draw(|f| ui::draw(f, &model))?;
 
-        if event::poll(Duration::from_millis(150))? {
+        if event::poll(Duration::from_millis(80))? {
             let Event::Key(key) = event::read()? else {
                 continue;
             };
@@ -60,11 +61,14 @@ pub fn run(dir: PathBuf, extensions: Vec<ExtensionItem>) -> anyhow::Result<()> {
                     model.run_checks();
                 }
                 KeyCode::Char('f') => {
-                    model.confirm_fix = true;
+                    if model.is_fixing || model.is_checking {
+                        model.message = Some("Operations already in progress.".to_string());
+                    } else {
+                        model.confirm_fix = true;
+                    }
                 }
                 KeyCode::Char('l') => {
                     model.run_check_links();
-                    model.message = Some("check-links completed.".to_string());
                 }
                 KeyCode::Char('d') => {
                     let has_desk = model
