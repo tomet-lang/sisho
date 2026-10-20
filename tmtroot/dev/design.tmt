@@ -36,22 +36,22 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - Nix は開発環境の話で、製品の約束ではない。全員が Nix を使うとは限らないので、sisho は `flake.nix` を読まない。Nix の利用者に「sisho を入れると合う tomet と twrit も付いてくる」包装は、別のリポジトリではなく、sisho の flake 自身が出す(2026-10-18、「Nix で束ねる」の節)。非 Nix の側に当たるのは rustup で、将来 sisho が担うかもしれないが、いまの範囲の外。
 - 拡張口(PATH 上の `sisho-foo` を `sisho foo` で呼ぶ cargo 式)は、第三者が参加したくなってから足す。足しても何も壊れない。(2026-10-20 に下の決定で更新。)
 - (2026-10-20 決定) 拡張機構を導入し、現行の `sisho tui` を最初のリファレンス拡張 `sisho-desk` として別リポジトリへ切り出す。誰も作っていない拡張機構は推測に過ぎないため、自身で最初の拡張を作って機構を実証する。
-  1. 拡張は `sisho-desk`、リポジトリも `sisho-desk`、呼ぶ語は `desk`。(`workbench` は初心者が打つには長く、`shelf` と揃えて `desk` とした。)
-  2. `sisho tui` は廃止し、互換 alias は置かずに一度に移す。`tui` という語は空く。
-  3. ビルトインコマンドおよび既知のプログラム(`tomet`・`twrit`・`tandr`・`shelf`)は、同名の拡張よりも常に優先する。
-  4. 拡張は独立した子プロセスとして実行する。sisho は引数をそのまま渡し、端末を引き渡し、拡張の終了コードをそのまま返す(`sisho shelf` と同じ)。拡張にはバージョンを求めず、最低バージョンも設けない。
-  5. `sisho-desk` は `sisho` の crate に一切依存しない。唯一使っていた `$EDITOR` の起動(`crates/sisho-tui/src/lib.rs:535`)は `std::process::Command` に置き換える。
-  6. コードは振る舞いを変えずに移す(Explorer, Migration, BatchMeta, StructuralGrep の全タブを維持)。変更は "workbench" から "desk" への名称変更と `sisho-run` の除去のみ。
-  7. `sisho-desk` は `tomet-*` crate を git 依存として自前で固定する(`twrit` と同様)。別プロセスなので型共有の衝突は起きない。
+  -. 拡張は `sisho-desk`、リポジトリも `sisho-desk`、呼ぶ語は `desk`。(`workbench` は初心者が打つには長く、`shelf` と揃えて `desk` とした。)
+  -. `sisho tui` は廃止し、互換 alias は置かずに一度に移す。`tui` という語は空く。
+  -. ビルトインコマンドおよび既知のプログラム(`tomet`・`twrit`・`tandr`・`shelf`)は、同名の拡張よりも常に優先する。
+  -. 拡張は独立した子プロセスとして実行する。sisho は引数をそのまま渡し、端末を引き渡し、拡張の終了コードをそのまま返す(`sisho shelf` と同じ)。拡張にはバージョンを求めず、最低バージョンも設けない。
+  -. `sisho-desk` は `sisho` の crate に一切依存しない。唯一使っていた `$EDITOR` の起動(`crates/sisho-tui/src/lib.rs:535`)は `std::process::Command` に置き換える。
+  -. コードは振る舞いを変えずに移す(Explorer, Migration, BatchMeta, StructuralGrep の全タブを維持)。変更は "workbench" から "desk" への名称変更と `sisho-run` の除去のみ。
+  -. `sisho-desk` は `tomet-*` crate を git 依存として自前で固定する(`twrit` と同様)。別プロセスなので型共有の衝突は起きない。
 - (2026-10-20 決定) インストールされた拡張の一覧表示 (`sisho --list` / `-l`)。利用者が手元の環境にある拡張を把握できるようにし、`sisho` 本体の TUI (`self-tui`) の情報源としても使う。
-  1. コマンドの形状: `sisho extensions` というサブコマンドではなく、`cargo --list` に倣って `--list` / `-l` フラグとする。拡張の名前空間（単語）を 1 つも奪わない。
-  2. 走査対象: `PATH` 上のディレクトリを順に探索し、名前が `sisho-<word>`（`<word>` は実行時と同じく英小文字・数字・ハイフン、先頭ハイフン不可）で、かつ実行権限のあるファイルを対象とする。
-  3. 拡張の実行禁止: 探索時に拡張プログラムを実行してバージョンや情報を問い合わせることは一切しない。
-  4. 表示形式: 単語と実行ファイルのパスを空白区切りで表示する。
-  5. 衝突と注記: ビルトインや既知ツールと同名で実行できないものは `(shadowed by builtin)` と注記する。`PATH` 内で同名の拡張が複数ある場合、通常は実際に実行される先頭の 1 件のみを表示する。
-  6. `--all` フラグ: `sisho --list --all` で、`PATH` の 2 つ目以降で隠蔽されている同名プログラムも `(shadowed by <first_path>)` 付きですべて表示できる。
-  7. 機械可読出力 (`--json`): 現時点では見送り。TUI はプロセス内の関数を直接呼べばよく、不要なキー規約の固定を避ける。
-  8. 実装の配置: `commands/` のサブコマンドではなく、拡張機能の知識（探索、一覧、単語判定）を持つ独立モジュール `app/src/extension.rs` に集約する。探索関数 `scan()` は `self-tui` からも直接利用できる。`sisho-tools` は `tools-by-subprocess`（`std::fs` 不可）であり、新 crate 追加による `.writ.tmt` 変更を避けるため `app` 内に配置した。
+  -. コマンドの形状: `sisho extensions` というサブコマンドではなく、`cargo --list` に倣って `--list` / `-l` フラグとする。拡張の名前空間（単語）を 1 つも奪わない。
+  -. 走査対象: `PATH` 上のディレクトリを順に探索し、名前が `sisho-<word>`（`<word>` は実行時と同じく英小文字・数字・ハイフン、先頭ハイフン不可）で、かつ実行権限のあるファイルを対象とする。
+  -. 拡張の実行禁止: 探索時に拡張プログラムを実行してバージョンや情報を問い合わせることは一切しない。
+  -. 表示形式: 単語と実行ファイルのパスを空白区切りで表示する。
+  -. 衝突と注記: ビルトインや既知ツールと同名で実行できないものは `(shadowed by builtin)` と注記する。`PATH` 内で同名の拡張が複数ある場合、通常は実際に実行される先頭の 1 件のみを表示する。
+  -. `--all` フラグ: `sisho --list --all` で、`PATH` の 2 つ目以降で隠蔽されている同名プログラムも `(shadowed by <first_path>)` 付きですべて表示できる。
+  -. 機械可読出力 (`--json`): 現時点では見送り。TUI はプロセス内の関数を直接呼べばよく、不要なキー規約の固定を避ける。
+  -. 実装の配置: `commands/` のサブコマンドではなく、拡張機能の知識（探索、一覧、単語判定）を持つ独立モジュール `app/src/extension.rs` に集約する。探索関数 `scan()` は `self-tui` からも直接利用できる。`sisho-tools` は `tools-by-subprocess`（`std::fs` 不可）であり、新 crate 追加による `.writ.tmt` 変更を避けるため `app` 内に配置した。
 
 ===[ 動詞 ]
 

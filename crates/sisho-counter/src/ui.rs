@@ -8,7 +8,7 @@ use ratatui::{
 use sisho_run::Status;
 use sisho_tools::Verdict;
 
-use crate::model::Model;
+use crate::model::{FocusedPane, Model, StepSlot};
 
 /// Render the complete sisho-counter interface (Board + Counter).
 pub fn draw(f: &mut Frame, model: &Model) {
@@ -145,6 +145,7 @@ fn spinner(tick: usize) -> &'static str {
 }
 
 fn draw_broken_links(f: &mut Frame, area: Rect, model: &Model) {
+    let is_focused = model.focused_pane == FocusedPane::BrokenLinks;
     let broken = model.broken_links();
     let mut items = Vec::new();
 
@@ -174,13 +175,44 @@ fn draw_broken_links(f: &mut Frame, area: Rect, model: &Model) {
                 Style::default().fg(Color::Green),
             )])));
         } else {
-            for link in broken {
+            // Scroll window if broken links exceed available area height inside the box.
+            let available_height = area.height.saturating_sub(3) as usize;
+            let (start_idx, end_idx) = if available_height > 0 && broken.len() > available_height {
+                let start = if model.selected_broken_link >= available_height {
+                    model.selected_broken_link + 1 - available_height
+                } else {
+                    0
+                };
+                let end = (start + available_height).min(broken.len());
+                (start, end)
+            } else {
+                (0, broken.len())
+            };
+
+            for (i, link) in broken[start_idx..end_idx].iter().enumerate() {
+                let actual_idx = start_idx + i;
+                let is_selected = is_focused && actual_idx == model.selected_broken_link;
+                let cursor = if is_selected { "> " } else { "  " };
                 let at_str = link.at.map(|p| format!(":{}", p.line)).unwrap_or_default();
                 items.push(ListItem::new(Line::from(vec![
+                    Span::styled(
+                        cursor,
+                        if is_selected {
+                            Style::default().fg(Color::Cyan)
+                        } else {
+                            Style::default()
+                        },
+                    ),
                     Span::styled("✗ ", Style::default().fg(Color::Red)),
                     Span::styled(
                         format!("{}{at_str}", link.source.display()),
-                        Style::default().fg(Color::White),
+                        if is_selected {
+                            Style::default()
+                                .fg(Color::White)
+                                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
+                        } else {
+                            Style::default().fg(Color::White)
+                        },
                     ),
                     Span::raw(format!(" -> {}", link.target)),
                 ])));
@@ -190,20 +222,44 @@ fn draw_broken_links(f: &mut Frame, area: Rect, model: &Model) {
 
     let title = if model.is_checking_links {
         " Broken Links (scanning...) ".to_string()
+    } else if !broken.is_empty() && is_focused {
+        format!(
+            " Broken Links ({}/{}) ",
+            model.selected_broken_link + 1,
+            broken.len()
+        )
     } else {
         format!(" Broken Links ({}) ", broken.len())
     };
 
-    let list = List::new(items).block(Block::default().borders(Borders::ALL).title(title));
+    let border_style = if is_focused {
+        Style::default().fg(Color::Cyan)
+    } else {
+        Style::default()
+    };
+
+    let list = List::new(items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(border_style)
+            .title(title)
+            .title_style(if is_focused {
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            }),
+    );
     f.render_widget(list, area);
 }
 
 fn draw_right_column(f: &mut Frame, area: Rect, model: &Model) {
     // Number of check command items + top/bottom borders (2 lines).
-    let cmd_count = if model.check_outcomes.is_empty() {
+    let cmd_count = if model.check_slots.is_empty() {
         sisho_tools::check_steps(&model.dir).len()
     } else {
-        model.check_outcomes.len()
+        model.check_slots.len()
     };
     let border_lines = 2;
     let height = (cmd_count as u16) + border_lines;
@@ -218,9 +274,10 @@ fn draw_right_column(f: &mut Frame, area: Rect, model: &Model) {
 }
 
 fn draw_checks(f: &mut Frame, area: Rect, model: &Model) {
+    let is_focused = model.focused_pane == FocusedPane::Checks;
     let mut items = Vec::new();
 
-    if model.check_outcomes.is_empty() {
+    if model.check_slots.is_empty() {
         if model.is_checking {
             let spin = spinner(model.tick);
             items.push(ListItem::new(Line::from(vec![
@@ -243,43 +300,73 @@ fn draw_checks(f: &mut Frame, area: Rect, model: &Model) {
             items.push(ListItem::new(Line::from("No checks run yet. Press [c].")));
         }
     } else {
-        for (i, outcome) in model.check_outcomes.iter().enumerate() {
-            let is_selected = i == model.selected_step;
+        for (i, slot) in model.check_slots.iter().enumerate() {
+            let is_selected = is_focused && i == model.selected_step;
             let cursor = if is_selected { "> " } else { "  " };
 
-            let (status_icon, status_style) = match outcome.status {
-                Status::Passed => ("✓ ", Style::default().fg(Color::Green)),
-                Status::Failed { .. } => (
-                    "✗ ",
-                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
-                ),
-                Status::NotFound => ("- ", Style::default().fg(Color::Yellow)),
-                Status::CouldNotStart { .. } => ("! ", Style::default().fg(Color::Red)),
-                Status::Signalled { .. } => ("! ", Style::default().fg(Color::Magenta)),
-            };
+            let line = match slot {
+                StepSlot::Done(outcome) => {
+                    let (status_icon, status_style) = match outcome.status {
+                        Status::Passed => ("✓ ", Style::default().fg(Color::Green)),
+                        Status::Failed { .. } => (
+                            "✗ ",
+                            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                        ),
+                        Status::NotFound => ("- ", Style::default().fg(Color::Yellow)),
+                        Status::CouldNotStart { .. } => ("! ", Style::default().fg(Color::Red)),
+                        Status::Signalled { .. } => ("! ", Style::default().fg(Color::Magenta)),
+                    };
 
-            let duration_str = format!("({:.2}s)", outcome.duration.as_secs_f64());
-            let line = Line::from(vec![
-                Span::styled(
-                    cursor,
-                    if is_selected {
-                        Style::default().fg(Color::Cyan)
-                    } else {
-                        Style::default()
-                    },
-                ),
-                Span::styled(status_icon, status_style),
-                Span::styled(
-                    &outcome.name,
-                    if is_selected {
-                        Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
-                    } else {
-                        Style::default()
-                    },
-                ),
-                Span::raw(" "),
-                Span::styled(duration_str, Style::default().fg(Color::DarkGray)),
-            ]);
+                    let duration_str = format!("({:.2}s)", outcome.duration.as_secs_f64());
+                    Line::from(vec![
+                        Span::styled(
+                            cursor,
+                            if is_selected {
+                                Style::default().fg(Color::Cyan)
+                            } else {
+                                Style::default()
+                            },
+                        ),
+                        Span::styled(status_icon, status_style),
+                        Span::styled(
+                            &outcome.name,
+                            if is_selected {
+                                Style::default()
+                                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
+                            } else {
+                                Style::default()
+                            },
+                        ),
+                        Span::raw(" "),
+                        Span::styled(duration_str, Style::default().fg(Color::DarkGray)),
+                    ])
+                }
+                StepSlot::Running { name } => {
+                    let spin = spinner(model.tick.wrapping_add(i));
+                    Line::from(vec![
+                        Span::styled(
+                            cursor,
+                            if is_selected {
+                                Style::default().fg(Color::Cyan)
+                            } else {
+                                Style::default()
+                            },
+                        ),
+                        Span::styled(format!("{spin} "), Style::default().fg(Color::Cyan)),
+                        Span::styled(
+                            name,
+                            if is_selected {
+                                Style::default()
+                                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
+                            } else {
+                                Style::default()
+                            },
+                        ),
+                        Span::raw(" "),
+                        Span::styled("(running...)", Style::default().fg(Color::Yellow)),
+                    ])
+                }
+            };
 
             items.push(ListItem::new(line));
         }
@@ -293,11 +380,32 @@ fn draw_checks(f: &mut Frame, area: Rect, model: &Model) {
         " Integrity & Checks "
     };
 
-    let list = List::new(items).block(Block::default().borders(Borders::ALL).title(title));
+    let border_style = if is_focused {
+        Style::default().fg(Color::Cyan)
+    } else {
+        Style::default()
+    };
+
+    let list = List::new(items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(border_style)
+            .title(title)
+            .title_style(if is_focused {
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            }),
+    );
     f.render_widget(list, area);
 }
 
 fn draw_output_preview(f: &mut Frame, area: Rect, model: &Model) {
+    let is_focused = model.focused_pane == FocusedPane::OutputPreview;
+    let mut total_lines = 0;
+
     let content = if let Some(outcome) = model.selected_outcome() {
         let mut lines = Vec::new();
         lines.push(Line::from(vec![
@@ -311,7 +419,7 @@ fn draw_output_preview(f: &mut Frame, area: Rect, model: &Model) {
                 "--- stdout ---",
                 Style::default().fg(Color::DarkGray),
             )));
-            for l in outcome.stdout.lines().take(15) {
+            for l in outcome.stdout.lines() {
                 lines.push(Line::from(l));
             }
         }
@@ -321,7 +429,7 @@ fn draw_output_preview(f: &mut Frame, area: Rect, model: &Model) {
                 "--- stderr ---",
                 Style::default().fg(Color::Red),
             )));
-            for l in outcome.stderr.lines().take(15) {
+            for l in outcome.stderr.lines() {
                 lines.push(Line::from(Span::styled(l, Style::default().fg(Color::Red))));
             }
         }
@@ -334,16 +442,47 @@ fn draw_output_preview(f: &mut Frame, area: Rect, model: &Model) {
             )));
         }
 
+        total_lines = lines.len();
         lines
     } else {
-        vec![Line::from("No step selected.")]
+        vec![Line::from("No step selected or step is still running.")]
+    };
+
+    let visible_height = area.height.saturating_sub(2) as usize;
+    let max_scroll = total_lines.saturating_sub(visible_height);
+    let scroll_y = model.preview_scroll.min(max_scroll);
+
+    let title = if total_lines > visible_height {
+        format!(
+            " Step Output Preview (lines {}-{}/{}) ",
+            scroll_y + 1,
+            (scroll_y + visible_height).min(total_lines),
+            total_lines
+        )
+    } else {
+        " Step Output Preview ".to_string()
+    };
+
+    let border_style = if is_focused {
+        Style::default().fg(Color::Cyan)
+    } else {
+        Style::default()
     };
 
     let paragraph = Paragraph::new(content)
+        .scroll((scroll_y as u16, 0))
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(" Step Output Preview "),
+                .border_style(border_style)
+                .title(title)
+                .title_style(if is_focused {
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default()
+                }),
         )
         .wrap(Wrap { trim: true });
 
@@ -386,17 +525,25 @@ fn draw_counter(f: &mut Frame, area: Rect, model: &Model) {
             ),
         ]));
     } else {
+        let focus_desc = match model.focused_pane {
+            FocusedPane::Checks => "Checks",
+            FocusedPane::BrokenLinks => "Links",
+            FocusedPane::OutputPreview => "Preview",
+        };
+
         lines.push(Line::from(vec![
+            Span::styled("[Tab]", Style::default().fg(Color::Cyan)),
+            Span::raw(format!(" Pane:{focus_desc}   ")),
+            Span::styled("[↑/k ↓/j]", Style::default().fg(Color::Cyan)),
+            Span::raw(" Move   "),
             Span::styled("[c]", Style::default().fg(Color::Cyan)),
             Span::raw(" Check   "),
             Span::styled("[f]", Style::default().fg(Color::Cyan)),
-            Span::raw(" Fix (ask)   "),
+            Span::raw(" Fix   "),
             Span::styled("[l]", Style::default().fg(Color::Cyan)),
-            Span::raw(" Check Links   "),
+            Span::raw(" Links   "),
             Span::styled("[d]", Style::default().fg(Color::Cyan)),
-            Span::raw(" Open Desk   "),
-            Span::styled("[↑/k ↓/j]", Style::default().fg(Color::Cyan)),
-            Span::raw(" Step   "),
+            Span::raw(" Desk   "),
             Span::styled("[q/Esc]", Style::default().fg(Color::Cyan)),
             Span::raw(" Quit"),
         ]));

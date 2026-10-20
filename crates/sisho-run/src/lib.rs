@@ -30,5 +30,5 @@ mod tests;
 
 pub use gate::{JobServerGate, JobToken, gate, init_gate};
 pub use outcome::{Outcome, Report, Status};
-pub use parallel::{Job, run_parallel};
+pub use parallel::{Job, run_parallel, run_parallel_streaming};
 pub use step::Step;

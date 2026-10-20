@@ -80,6 +80,33 @@ fn parallel_results_keep_plan_order_not_finish_order() {
 }
 
 #[test]
+fn parallel_streaming_delivers_outcomes_as_they_finish() {
+    use std::sync::Mutex;
+    let slow = sh("sleep 0.2; echo slow");
+    let fast = sh("echo fast");
+    let received = Mutex::new(Vec::new());
+
+    let outcomes = crate::run_parallel_streaming(
+        vec![Job::step(&slow), Job::step(&fast)],
+        |index, outcome| {
+            received.lock().unwrap().push((index, outcome.stdout));
+        },
+    );
+
+    assert_eq!(outcomes[0].stdout, "slow\n");
+    assert_eq!(outcomes[1].stdout, "fast\n");
+
+    let streamed = received.into_inner().unwrap();
+    assert_eq!(streamed.len(), 2);
+    // fast finished first even though it was index 1
+    assert_eq!(streamed[0].0, 1);
+    assert_eq!(streamed[0].1, "fast\n");
+    assert_eq!(streamed[1].0, 0);
+    assert_eq!(streamed[1].1, "slow\n");
+}
+
+
+#[test]
 fn parallel_jobs_overlap_in_time() {
     let a = sh("sleep 0.5");
     let b = sh("sleep 0.5");

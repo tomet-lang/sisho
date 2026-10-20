@@ -29,7 +29,7 @@ impl Status {
 }
 
 /// What one step left behind.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Outcome {
     /// Display name of the step, e.g. `tomet check`.
     pub name: String,

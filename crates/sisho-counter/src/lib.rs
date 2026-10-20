@@ -9,6 +9,8 @@ pub mod screen;
 pub mod ui;
 
 #[cfg(test)]
+mod model_tests;
+#[cfg(test)]
 mod render_tests;
 
 use std::path::PathBuf;
@@ -89,11 +91,26 @@ pub fn run(dir: PathBuf, extensions: Vec<ExtensionItem>) -> anyhow::Result<()> {
                             Some("sisho-desk extension is not installed on PATH".to_string());
                     }
                 }
+                KeyCode::Tab => {
+                    model.next_pane();
+                }
+                KeyCode::BackTab => {
+                    model.prev_pane();
+                }
                 KeyCode::Up | KeyCode::Char('k') => {
                     model.move_selection_up();
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
                     model.move_selection_down();
+                }
+                KeyCode::PageUp => {
+                    model.scroll_preview_up(10);
+                }
+                KeyCode::PageDown => {
+                    model.scroll_preview_down(10);
+                }
+                KeyCode::Home => {
+                    model.preview_scroll = 0;
                 }
                 _ => {}
             }

@@ -5,11 +5,31 @@ use ratatui::backend::TestBackend;
 use sisho_run::{Outcome, Status};
 use sisho_tools::{Verdict, Version};
 
-use crate::model::{ExtensionItem, Model, ToolStatus};
+use crate::model::{ExtensionItem, FocusedPane, Model, StepSlot, ToolStatus};
 use crate::ui;
 
 fn create_mock_model() -> Model {
     let (sender, receiver) = std::sync::mpsc::channel();
+    let outcomes = vec![
+        Outcome {
+            name: "tomet check".to_string(),
+            command_line: "tomet check .".to_string(),
+            status: Status::Passed,
+            stdout: "all passed\nline 2\nline 3\nline 4\nline 5\n".to_string(),
+            stderr: String::new(),
+            duration: std::time::Duration::from_millis(15),
+        },
+        Outcome {
+            name: "twrit check".to_string(),
+            command_line: "twrit check .".to_string(),
+            status: Status::Failed { code: 1 },
+            stdout: String::new(),
+            stderr: "rule error in spec\n".to_string(),
+            duration: std::time::Duration::from_millis(90),
+        },
+    ];
+    let check_slots = outcomes.iter().cloned().map(StepSlot::Done).collect();
+
     Model {
         dir: PathBuf::from("."),
         tools: vec![
@@ -37,26 +57,13 @@ fn create_mock_model() -> Model {
             is_active: true,
             note: None,
         }],
-        check_outcomes: vec![
-            Outcome {
-                name: "tomet check".to_string(),
-                command_line: "tomet check .".to_string(),
-                status: Status::Passed,
-                stdout: "all passed\n".to_string(),
-                stderr: String::new(),
-                duration: std::time::Duration::from_millis(15),
-            },
-            Outcome {
-                name: "twrit check".to_string(),
-                command_line: "twrit check .".to_string(),
-                status: Status::Failed { code: 1 },
-                stdout: String::new(),
-                stderr: "rule error in spec\n".to_string(),
-                duration: std::time::Duration::from_millis(90),
-            },
-        ],
+        check_slots,
+        check_outcomes: outcomes,
         links_report: None,
         selected_step: 0,
+        selected_broken_link: 0,
+        preview_scroll: 0,
+        focused_pane: FocusedPane::default(),
         confirm_fix: false,
         message: None,
         is_checking: false,
@@ -85,8 +92,11 @@ fn renders_normal_board_and_counter() {
     assert!(view.contains("Integrity & Checks"), "{view}");
     assert!(view.contains("tomet check"), "{view}");
     assert!(view.contains("Counter (Actions)"), "{view}");
-    assert!(view.contains("[c] Check"), "{view}");
-    assert!(view.contains("[f] Fix"), "{view}");
+    assert!(view.contains("[c]"), "{view}");
+    assert!(view.contains("Check"), "{view}");
+    assert!(view.contains("[f]"), "{view}");
+    assert!(view.contains("Fix"), "{view}");
+    assert!(view.contains("Pane:Checks"), "{view}");
 }
 
 #[test]
@@ -142,7 +152,19 @@ fn renders_in_progress_checks_and_links() {
     let mut model = create_mock_model();
     model.is_checking = true;
     model.is_checking_links = true;
-    model.check_outcomes.clear();
+    model.check_slots = vec![
+        StepSlot::Done(Outcome {
+            name: "tomet check".to_string(),
+            command_line: "tomet check .".to_string(),
+            status: Status::Passed,
+            stdout: String::new(),
+            stderr: String::new(),
+            duration: std::time::Duration::from_millis(10),
+        }),
+        StepSlot::Running {
+            name: "twrit check".to_string(),
+        },
+    ];
     model.links_report = None;
     model.message = Some("Running checks...".to_string());
 
@@ -150,7 +172,8 @@ fn renders_in_progress_checks_and_links() {
 
     let view = terminal.backend().to_string();
     assert!(view.contains("Integrity & Checks (running...)"), "{view}");
-    assert!(view.contains("Running checks in background..."), "{view}");
+    assert!(view.contains("✓ tomet check"), "{view}");
+    assert!(view.contains("twrit check (running...)"), "{view}");
     assert!(view.contains("Broken Links (scanning...)"), "{view}");
     assert!(view.contains("Scanning links in background..."), "{view}");
     assert!(view.contains("status: ⠋ Running checks..."), "{view}");
@@ -163,13 +186,53 @@ fn renders_in_progress_fixing() {
 
     let mut model = create_mock_model();
     model.is_fixing = true;
-    model.check_outcomes.clear();
+    model.check_slots = vec![StepSlot::Running {
+        name: "tomet format -i".to_string(),
+    }];
     model.message = Some("Applying fixes...".to_string());
 
     terminal.draw(|f| ui::draw(f, &model)).unwrap();
 
     let view = terminal.backend().to_string();
     assert!(view.contains("Integrity & Checks (fixing...)"), "{view}");
-    assert!(view.contains("Applying fixes in background..."), "{view}");
+    assert!(view.contains("tomet format -i (running...)"), "{view}");
     assert!(view.contains("status: ⠋ Applying fixes..."), "{view}");
+}
+
+#[test]
+fn renders_pane_focus_and_navigation() {
+    let backend = TestBackend::new(100, 30);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    let mut model = create_mock_model();
+    assert_eq!(model.focused_pane, FocusedPane::Checks);
+
+    model.next_pane();
+    assert_eq!(model.focused_pane, FocusedPane::BrokenLinks);
+    terminal.draw(|f| ui::draw(f, &model)).unwrap();
+    let view = terminal.backend().to_string();
+    assert!(view.contains("Pane:Links"), "{view}");
+
+    model.next_pane();
+    assert_eq!(model.focused_pane, FocusedPane::OutputPreview);
+    terminal.draw(|f| ui::draw(f, &model)).unwrap();
+    let view = terminal.backend().to_string();
+    assert!(view.contains("Pane:Preview"), "{view}");
+
+    model.next_pane();
+    assert_eq!(model.focused_pane, FocusedPane::Checks);
+}
+
+#[test]
+fn renders_output_preview_scrolling() {
+    let backend = TestBackend::new(100, 30);
+    let mut terminal = Terminal::new(backend).unwrap();
+
+    let mut model = create_mock_model();
+    model.focused_pane = FocusedPane::OutputPreview;
+    model.preview_scroll = 2;
+
+    terminal.draw(|f| ui::draw(f, &model)).unwrap();
+    let view = terminal.backend().to_string();
+    assert!(view.contains("Step Output Preview"), "{view}");
 }
