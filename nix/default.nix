@@ -58,6 +58,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         fenix = inputs.fenix.packages.${system};
         inherit (tometPkgs) tomet tomet-lsp;
         inherit (twritPkgs) twrit;
+        inherit (deskPkgs) sisho-desk;
       };
 
       treefmt = import ./formatter.nix {

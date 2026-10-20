@@ -7,8 +7,7 @@ use clap::{Args, Parser, Subcommand};
 #[command(
     name = "sisho",
     version,
-    about = "Orchestrate the Tomet ecosystem (tomet, twrit, tandr)",
-    arg_required_else_help = true
+    about = "Orchestrate the Tomet ecosystem (tomet, twrit, tandr)"
 )]
 pub struct Cli {
     /// Number of parallel jobs to run.

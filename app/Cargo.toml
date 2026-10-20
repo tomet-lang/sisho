@@ -10,7 +10,12 @@ publish = false
 name = "sisho"
 path = "src/main.rs"
 
+[features]
+default = ["tui"]
+tui = ["dep:sisho-counter"]
+
 [dependencies]
+sisho-counter = { workspace = true, optional = true }
 sisho-run = { workspace = true }
 sisho-serve = { workspace = true }
 sisho-tools = { workspace = true }

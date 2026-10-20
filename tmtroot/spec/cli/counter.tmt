@@ -1,0 +1,33 @@
+@meta{
+  id: cli.counter
+}
+
+`sisho`: when run with no arguments on an interactive terminal, opens the librarian's counter (`sisho-counter`).
+
+Status: in progress. Decided 2026-10-20.
+
+=[ Overview ]
+
+Running `sisho` without subcommands or flags on an interactive terminal launches `sisho-counter`. It provides a dedicated operating dashboard for `sisho` itself: inspecting ecosystem health, checking tool versions, viewing broken links and extensions, and running checks or fixes on demand.
+
+It does not edit documents: document editing and migrations belong to `sisho desk`.
+
+=[ Two-tier Design: Board & Counter ]
+
+1. **Board (Information Display)**:
+   - **Tools & Extensions**: Displays versions and compatibility status of core tools (`tomet`, `twrit`, `tandr`) from `sisho-tools`, along with installed extensions discovered on `PATH`.
+   - **Checks & Integrity**: Displays status, exit code, and duration of each step in `check`, with a preview pane showing output of the selected step.
+   - **Broken Links**: Displays summary and entries of broken links found by `check-links`.
+
+2. **Counter (Execution Selection)**:
+   - The interactive prompt bar at the bottom for choosing and executing tasks:
+     - `c`: Execute `sisho check` and update the Board.
+     - `f`: Execute `sisho fix`. Always prompts for confirmation (`Apply fixes? [y/N]`) before any file write occurs.
+     - `l`: Re-run `check-links` verification.
+     - `d`: Launch extension `sisho-desk` with terminal handover, restoring the counter on exit.
+     - `q` / `Esc`: Exit the counter.
+
+=[ Terminal Behaviour ]
+
+- **Non-terminal execution**: If standard input or standard output is not a terminal (e.g. a pipe or automated script), `sisho` never opens the screen and instead prints command-line help as before.
+- **Terminal Restoration**: An RAII screen guard and panic hook guarantee that raw mode is disabled and the alternate screen is exited upon any termination (normal exit, error, or panic).

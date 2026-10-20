@@ -5,6 +5,7 @@
   tomet,
   tomet-lsp,
   twrit,
+  sisho-desk,
   ...
 }:
 let
@@ -24,6 +25,7 @@ mkShell {
     tomet
     tomet-lsp
     twrit
+    sisho-desk
     just
 
     #= Build

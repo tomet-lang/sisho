@@ -1,0 +1,17 @@
+[package]
+name = "sisho-counter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "The interactive operating dashboard and counter for sisho."
+publish = false
+
+[dependencies]
+sisho-run = { workspace = true }
+sisho-tools = { workspace = true }
+sisho-vault = { workspace = true }
+
+#= Crates.io
+anyhow = { workspace = true }
+crossterm = { workspace = true }
+ratatui = { workspace = true }

@@ -15,6 +15,7 @@ The design memo is [tmtroot/dev/design.tmt](tmtroot/dev/design.tmt).
 ## Usage
 
 ```bash
+sisho                # interactive counter dashboard (when run on a terminal with no arguments)
 sisho check [path]   # verify without writing; steps run at the same time
 sisho fix [path]     # regenerate, export, format; steps run one after another
 sisho check-links [path]   # find links that point at nothing (cached, outside the vault)
@@ -40,6 +41,7 @@ Commands that work on the vault itself, like `check-links`, `convert` and `serve
 The behaviour of `check-links` and `serve`, which moved here from `tomet`, is written down under `tmtroot/spec/cli/`.
 
 When the reader of the output goes away early (`sisho check-links | head`), `sisho` ends quietly with 141, which is 128 plus `SIGPIPE`, as a shell reports it.
+When run with no arguments on an interactive terminal, `sisho` opens its own counter dashboard (`sisho-counter`), showing project health, tool and extension status, and offering on-demand check and fix actions. Running `sisho` without a terminal prints command-line help. The contract is written down under [tmtroot/spec/cli/counter.tmt](tmtroot/spec/cli/counter.tmt).
 
 `sisho <tool> ...` is a pass-through: the tool gets the terminal and everything after its name, flags included, and its exit code becomes `sisho`'s. A tool that is not installed exits 127, one that cannot be started 126, one ended by a signal 128 plus the signal, as `env` does.
 
@@ -75,6 +77,7 @@ Each tool is built as its own flake builds it, so the binary cache of `tomet` se
 - `crates/sisho-tools` (`sisho-tools`) -- What `sisho` knows about `tomet`, `twrit` and `tandr`. Layer 1.
 - `crates/sisho-vault` (`sisho-vault`) -- Vault and workspace commands moved out of `tomet`, and conversions. Layer 1.
 - `crates/sisho-serve` (`sisho-serve`) -- `serve`, kept apart so the HTTP stack stays out of other builds. Layer 1.
+- `crates/sisho-counter` (`sisho-counter`) -- Interactive counter dashboard, kept apart so the TUI stack stays out of the core CLI. Layer 1.
 - `crates/sisho-run` (`sisho-run`) -- Runs external commands and collects outcomes. The only crate that starts a process. Layer 0.
 
 ## Building and Testing

@@ -19,7 +19,7 @@ does not relax the rule to fit the change it wanted to make.
 
   layers: {
     2: list( "app" )
-    1: list( "crates/sisho-tools", "crates/sisho-vault", "crates/sisho-serve" )
+    1: list( "crates/sisho-tools", "crates/sisho-vault", "crates/sisho-serve", "crates/sisho-counter" )
     0: list( "crates/sisho-run" )
   }
 }
@@ -30,10 +30,11 @@ upward ones are not.
 
 Layer 0 runs commands and knows no tool by name. Layer 1 holds what `sisho`
 knows about the core tools (`sisho-tools`) and what it implements itself
-(`sisho-vault`, `sisho-serve`). Layer 2 is the program.
+(`sisho-vault`, `sisho-serve`, `sisho-counter`). Layer 2 is the program.
 
 `sisho-serve` is its own crate so that the HTTP stack stays out of the
-build of every other command.
+build of every other command. `sisho-counter` is its own crate so that
+the TUI stack stays out of the core CLI build.
 
 Dev-dependencies are exempt.
 

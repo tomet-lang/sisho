@@ -37,7 +37,41 @@ fn main() -> ExitCode {
     }
 
     let Some(command) = &cli.command else {
-        let _ = Cli::command().print_help();
+        use std::io::IsTerminal;
+        if std::io::stdin().is_terminal() && std::io::stdout().is_terminal() {
+            #[cfg(feature = "tui")]
+            {
+                let extensions = extension::scan()
+                    .into_iter()
+                    .map(|e| sisho_counter::ExtensionItem {
+                        word: e.word,
+                        path: e.path,
+                        is_active: matches!(e.status, extension::ExtensionStatus::Active),
+                        note: match e.status {
+                            extension::ExtensionStatus::ShadowedByBuiltin => {
+                                Some("shadowed by builtin".to_string())
+                            }
+                            extension::ExtensionStatus::ShadowedByDuplicate(orig) => {
+                                Some(format!("shadowed by {}", orig.display()))
+                            }
+                            extension::ExtensionStatus::Active => None,
+                        },
+                    })
+                    .collect();
+                if let Err(error) = sisho_counter::run(std::path::PathBuf::from("."), extensions) {
+                    eprintln!("sisho: {error:#}");
+                    return ExitCode::from(OWN_ERROR);
+                }
+                return ExitCode::SUCCESS;
+            }
+        }
+        let _ = Cli::command()
+            .after_help(format!(
+                "Tools: {}\n`sisho <tool> ...` runs the tool with the rest of the command line.\nExtensions: a program named `sisho-<word>` on PATH runs as `sisho <word>`, for example `sisho desk`.",
+                commands::tool::tool_names()
+            ))
+            .print_help();
+        println!();
         return ExitCode::from(USAGE_ERROR);
     };
 

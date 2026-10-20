@@ -131,6 +131,40 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - `serve`(2026-10-18): 1 文書を HTML で、127.0.0.1 の HTTP で返し、リクエストのたびに読み直して描画する。描画は `convert --to html` と同じ関数なので、見えるものが `convert` の書くものと同じ。tomet の `serve` とページがバイト単位で一致することを確かめた。意図した差は 2 つ: 描画できない文書は HTTP 500 のエラーページ(tomet は 200)、描画とファイルの読み込みはブロッキング用のスレッドで行う。`--port 0` で空いているポートを使える。
 - `tui`(2026-10-18): `apps/tui`(3,747 行、16 ファイル)を、構成を変えずに `sisho-tui` へ移した(`app/` 状態、`engine/`、`ui/` 描画)。構造ペインは `tomet-transform` を使っていて、tandr ができたときに作り直す領域なので、今は触らない。変えたのは端末の復帰だけ: 元の `run_tui` は、読み込み中の `?` による早期 return で、raw モードと代替画面を戻さなかった。いまは破棄時に必ず戻す `Screen` のガードと、パニック時のフックがある。元のバグは、コードを読んで見つけたもので、実機では再現できていない(読み込み中のエラーは、スキャンのスレッドがパニックした場合にしか通らない)。同じ vault で `tomet tui` と `sisho tui` を仮想端末(tmux)に出し、起動画面と 9 回のキー操作のあとの画面、計 10 画面を比べて、すべて一致した。テストは移した 7 本に、`TestBackend` で描画を確かめる 7 本を足した。
 - `tui` の切り出し(2026-10-20): `sisho tui` を独立したリポジトリ `sisho-desk` (呼ぶ語は `desk`) へ移出した。文書を直接編集・移行する作業台は、オーケストレータ本体の責務というよりはエコシステムを補佐する道具であり、拡張機構 (`sisho-<word>`) の第一号リファレンス実装として最適だったため。`sisho` からは `crates/sisho-tui`、`commands/tui.rs`、`ratatui` や `crossterm` 等の依存をすべて撤去した。
+- 司書の窓口: `sisho-counter` (2026-10-20 決定): 引数なしの `sisho` を叩いた時に起動する、`sisho` 自身の対話画面。
+  1. 位置づけと責務: `sisho` そのものの状態管理・操作を行う窓口。文書編集・移行は行わない(`sisho-desk` の責務)。
+  2. 二層設計: 「Board は情報表示、Counter は実行選択」。
+     - Board (掲示領域・上部〜中央): プロジェクトの現在の健全性とツールの状態を俯瞰する静的な情報表示。
+       - Tools & Extensions: コアツールの存在・版・適合判定 (`sisho-tools`)、および PATH 上の拡張一覧 (`sisho-counter` に渡されたデータ)。
+       - Checks & Integrity: `check` の各ステップの合否、所要時間、選択されたステップの標準出力/エラー出力プレビュー。
+       - Broken Links: `sisho-vault` の `check-links` で得られた壊れたリンク一覧。
+     - Counter (受付領域・下部): 司書への仕事の依頼・実行選択。
+       - `c`: `check` の再実行。
+       - `f`: `fix` の実行。ファイルを書き換えるため `Apply fixes? [y/N]` の確認プロンプトを Counter に表示。
+       - `l`: `check-links` の再実行。
+       - `d`: 拡張 `sisho-desk` の起動(端末を引き渡し、終了後に復帰)。
+       - `q`: 終了。
+  3. 画面スケッチ:
+```text
+┌─ Board (Project Status) ──────────────────────────────────────────────────┐
+│ Tools & Extensions                    │ Integrity & Checks                │
+│  ✓ tomet 0.2.0 (fine)                │  ✓ twrit check (0.09s)            │
+│  ✓ twrit 0.2.0 (fine)                │  ✓ tomet check (0.01s)            │
+│  - tandr (not installed)              │  ✗ tomet format (failed)          │
+│  • desk: ~/.nix-profile/...          │  ✓ tomet export (0.01s)           │
+│                                       │                                   │
+│ Broken Links (0 cached)               │ Step Output Preview               │
+│  (no broken links found)              │  Diff in docs/spec.tmt:42         │
+├───────────────────────────────────────────────────────────────────────────┤
+│ Counter (Actions)                                                         │
+│  [c] Check   [f] Fix (ask)   [l] Check Links   [d] Open Desk   [q] Quit   │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+  4. 非 TTY での挙動: 標準入力または標準出力が端末でない場合(パイプやスクリプト)は画面を開かず、従来通りヘルプを表示して終了する。既存のスクリプトを壊さない。
+  5. 端末の復帰: 正常終了、エラー、パニック(panic hook)のいずれでも raw モードと代替画面を確実に復帰する RAII ガードを設ける。
+  6. クレートとレイヤー: `crates/sisho-counter` として Layer 1 に新設する。`sisho-serve` と同様に TUI スタック (`ratatui`, `crossterm`) をコアから隔離する。`app` の Cargo feature `tui` (デフォルト有効) で切り離す。
+  7. プロセス起動: `sisho-counter` 自身は `std::process` を一切使わず、ステップの実行はすべて Layer 0 の `sisho-run` (`Step`, `Outcome`) を通す。したがって `process-door` の例外追加は不要。
+  8. `.writ.tmt` の更新: Layer 1 の一覧に `crates/sisho-counter` を追加する(作者のみが編集)。
 - `--advanced`・`--lang`・`--body` は `--to html` のときだけ。ほかの形式に付けると使い方の誤りで、終了コード 2。
 - 描画の糊(パースと準備、各形式への描画)は `sisho-vault` の `render` に 1 か所だけ置き、`export` と `convert` が共有する。`serve` は `convert` の関数を通して使う。
 
