@@ -531,22 +531,46 @@ fn draw_counter(f: &mut Frame, area: Rect, model: &Model) {
             FocusedPane::OutputPreview => "Preview",
         };
 
-        lines.push(Line::from(vec![
+        let mut action_spans = vec![
             Span::styled("[Tab]", Style::default().fg(Color::Cyan)),
             Span::raw(format!(" Pane:{focus_desc}   ")),
-            Span::styled("[↑/k ↓/j]", Style::default().fg(Color::Cyan)),
-            Span::raw(" Move   "),
-            Span::styled("[c]", Style::default().fg(Color::Cyan)),
-            Span::raw(" Check   "),
-            Span::styled("[f]", Style::default().fg(Color::Cyan)),
-            Span::raw(" Fix   "),
-            Span::styled("[l]", Style::default().fg(Color::Cyan)),
-            Span::raw(" Links   "),
-            Span::styled("[d]", Style::default().fg(Color::Cyan)),
-            Span::raw(" Desk   "),
-            Span::styled("[q/Esc]", Style::default().fg(Color::Cyan)),
-            Span::raw(" Quit"),
-        ]));
+        ];
+
+        match model.focused_pane {
+            FocusedPane::BrokenLinks => {
+                if !model.broken_links().is_empty() {
+                    action_spans.push(Span::styled("[Enter/e]", Style::default().fg(Color::Yellow)));
+                    action_spans.push(Span::raw(" Edit   "));
+                }
+                action_spans.push(Span::styled("[d]", Style::default().fg(Color::Cyan)));
+                action_spans.push(Span::raw(" Desk   "));
+                action_spans.push(Span::styled("[↑/k ↓/j]", Style::default().fg(Color::Cyan)));
+                action_spans.push(Span::raw(" Move   "));
+            }
+            FocusedPane::Checks => {
+                action_spans.push(Span::styled("[↑/k ↓/j]", Style::default().fg(Color::Cyan)));
+                action_spans.push(Span::raw(" Move   "));
+                action_spans.push(Span::styled("[d]", Style::default().fg(Color::Cyan)));
+                action_spans.push(Span::raw(" Desk   "));
+            }
+            FocusedPane::OutputPreview => {
+                action_spans.push(Span::styled("[↑/k ↓/j]", Style::default().fg(Color::Cyan)));
+                action_spans.push(Span::raw(" Scroll   "));
+                action_spans.push(Span::styled("[d]", Style::default().fg(Color::Cyan)));
+                action_spans.push(Span::raw(" Desk   "));
+            }
+        }
+
+        action_spans.push(Span::styled("[c]", Style::default().fg(Color::Cyan)));
+        action_spans.push(Span::raw(" Check   "));
+        action_spans.push(Span::styled("[f]", Style::default().fg(Color::Cyan)));
+        action_spans.push(Span::raw(" Fix   "));
+        action_spans.push(Span::styled("[l]", Style::default().fg(Color::Cyan)));
+        action_spans.push(Span::raw(" Links   "));
+        action_spans.push(Span::styled("[q/Esc]", Style::default().fg(Color::Cyan)));
+        action_spans.push(Span::raw(" Quit"));
+
+        lines.push(Line::from(action_spans));
 
         if let Some(msg) = &model.message {
             let is_busy = model.is_checking || model.is_checking_links || model.is_fixing;

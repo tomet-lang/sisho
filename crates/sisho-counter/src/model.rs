@@ -363,4 +363,9 @@ impl Model {
             .get(self.selected_step)
             .and_then(StepSlot::outcome)
     }
+
+    pub fn selected_broken_link_item(&self) -> Option<&BrokenLink> {
+        self.broken_links().get(self.selected_broken_link)
+    }
 }
+

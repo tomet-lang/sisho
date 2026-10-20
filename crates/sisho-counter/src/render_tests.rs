@@ -136,12 +136,15 @@ fn renders_broken_links_list() {
         }],
         unreadable: Vec::new(),
     });
+    model.focused_pane = FocusedPane::BrokenLinks;
 
     terminal.draw(|f| ui::draw(f, &model)).unwrap();
 
     let view = terminal.backend().to_string();
-    assert!(view.contains("Broken Links (1)"), "{view}");
+    assert!(view.contains("Broken Links (1/1)"), "{view}");
     assert!(view.contains("docs/intro.tmt:15 -> missing.tmt"), "{view}");
+    assert!(view.contains("[Enter/e]"), "{view}");
+    assert!(view.contains("Edit"), "{view}");
 }
 
 #[test]

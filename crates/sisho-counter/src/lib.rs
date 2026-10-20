@@ -4,6 +4,7 @@
 //! - **Board**: Status of tools, extensions, integrity check outcomes, and broken links.
 //! - **Counter**: Action prompt bar to run check, fix, check-links, or open desk.
 
+pub mod editor;
 pub mod model;
 pub mod screen;
 pub mod ui;
@@ -18,7 +19,8 @@ use std::time::Duration;
 
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 
-pub use model::{ExtensionItem, Model};
+pub use editor::resolve_editor;
+pub use model::{ExtensionItem, FocusedPane, Model};
 pub use screen::Screen;
 
 /// Run the interactive counter TUI.
@@ -72,20 +74,50 @@ pub fn run(dir: PathBuf, extensions: Vec<ExtensionItem>) -> anyhow::Result<()> {
                 KeyCode::Char('l') => {
                     model.run_check_links();
                 }
+                KeyCode::Enter | KeyCode::Char('e') => {
+                    if model.focused_pane == FocusedPane::BrokenLinks {
+                        if let Some(link) = model.selected_broken_link_item() {
+                            let source_path = model.dir.join(&link.source);
+                            let line = link.at.map(|p| p.line);
+                            let column = link.at.map(|p| p.column);
+                            let step = resolve_editor(
+                                &source_path,
+                                line,
+                                column,
+                                &model.extensions,
+                            );
+                            screen.execute_handover(|| {
+                                let _ = step.run_inherited();
+                            })?;
+                            model.run_check_links();
+                        }
+                    } else if model.focused_pane == FocusedPane::Checks {
+                        model.focused_pane = FocusedPane::OutputPreview;
+                    }
+                }
                 KeyCode::Char('d') => {
                     let has_desk = model
                         .extensions
                         .iter()
                         .any(|e| e.word == "desk" && e.is_active);
                     if has_desk {
-                        let dir_arg = model.dir.clone();
+                        let target_arg = if model.focused_pane == FocusedPane::BrokenLinks {
+                            if let Some(link) = model.selected_broken_link_item() {
+                                model.dir.join(&link.source)
+                            } else {
+                                model.dir.clone()
+                            }
+                        } else {
+                            model.dir.clone()
+                        };
                         screen.execute_handover(|| {
                             let _ = sisho_run::Step::new("desk", "sisho-desk")
-                                .arg(&dir_arg)
+                                .arg(&target_arg)
                                 .run_inherited();
                         })?;
                         model.refresh_tools();
                         model.run_checks();
+                        model.run_check_links();
                     } else {
                         model.message =
                             Some("sisho-desk extension is not installed on PATH".to_string());

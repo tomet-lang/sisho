@@ -24,10 +24,11 @@ It does not edit documents: document editing and migrations belong to `sisho des
      - `Tab` / `BackTab`: Cycle focus between Board panes (`Integrity & Checks`, `Broken Links`, and `Step Output Preview`).
      - `↑` / `k`, `↓` / `j`: Navigate selection or scroll within the focused pane (select checks, browse broken links, or scroll output preview).
      - `PageUp` / `PageDown`: Scroll output preview by page when focused on the preview pane.
+     - `Enter` / `e`: When focused on Broken Links, open the selected link's source file in an editor at the broken line, restoring the counter and re-verifying links on return. Resolves via `$SISHO_EDITOR` (supporting `{file}` and `{line}` templates or extension words), `$VISUAL`, `$EDITOR`, `sisho-desk`, and `nano`.
      - `c`: Execute `sisho check` and update the Board.
      - `f`: Execute `sisho fix`. Always prompts for confirmation (`Apply fixes? [y/N]`) before any file write occurs.
      - `l`: Re-run `check-links` verification.
-     - `d`: Launch extension `sisho-desk` with terminal handover, restoring the counter on exit.
+     - `d`: Launch extension `sisho-desk` with terminal handover, targeting the selected broken link file (or vault directory) and restoring the counter on exit.
      - `q` / `Esc`: Exit the counter.
 
 =[ Terminal Behaviour ]
