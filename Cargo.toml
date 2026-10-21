@@ -46,6 +46,9 @@ tomet-pandoc = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-typst = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-html = { git = "https://github.com/tomet-lang/tomet.git" }
 
+#= Concurrency
+jobserver-gate = { git = "https://github.com/tomet-lang/jobserver-gate.git" }
+
 #= Crates.io
 anyhow = "1"
 axum = { version = "0.8", default-features = false, features = [

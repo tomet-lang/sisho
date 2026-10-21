@@ -699,6 +699,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "jobserver-gate"
+version = "0.1.0"
+dependencies = [
+ "jobserver",
+]
+
+[[package]]
 name = "js-sys"
 version = "0.3.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1245,7 +1252,7 @@ dependencies = [
 name = "sisho-sdk"
 version = "0.1.0"
 dependencies = [
- "jobserver",
+ "jobserver-gate",
  "serde",
  "serde_json",
 ]

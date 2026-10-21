@@ -8,6 +8,6 @@ description = "SDK and protocol definitions for sisho extensions."
 publish = false
 
 [dependencies]
-jobserver = { workspace = true }
+jobserver-gate = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
