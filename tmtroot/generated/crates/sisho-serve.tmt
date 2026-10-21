@@ -1,0 +1,36 @@
+@kind(api)
+
+@meta{crate: sisho-serve, dependencies: list(sisho-vault), dependents: list(sisho-cli)}
+
+=[sisho-serve]
+
+Layer 1: `sisho serve`.
+
+One document, as HTML, over HTTP on 127.0.0.1, rendered again on every
+request: edit the file and reload the page. It is the same rendering as
+`sisho convert --to html`, so what you see is what that writes.
+
+Kept in its own crate so that the HTTP stack (axum, tokio) stays out of
+the build of every other command.
+
+==[Structs]
+
+===[struct Options]
+
+What to serve, and how to render it.
+
+==[Functions]
+
+===[fn render_page]
+
+The document as HTML, as it is on disk now.
+
+===[fn router]
+
+The routes: the document at `/`.
+
+===[fn serve]
+
+Serve on `127.0.0.1:port` until the process ends. `0` takes a free port.
+`on_listening` is told the address once it is bound, which is the first
+moment a request can be made.

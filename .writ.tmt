@@ -103,3 +103,27 @@ failure, and it shows up here rather than in review.
 
 A file exported from @dir(tmtroot/) is generated. Do not hand-edit it. Edit
 the source and re-export.
+
+==[ rust-api-docs ]
+
+@rule(rust-api-docs){
+  guard: { twrit: rust-api }
+
+  rust_api: {
+    out: "tmtroot/generated/crates"
+  }
+}
+
+API documentation for all workspace Rust crates must be kept up to date
+with the source code and inner doc-comments (`//!`, `///`).
+
+---[ Why ]---
+
+Source code and inner doc-comments are the authoritative source of truth
+for API behavior and module structures. Extracted `.tmt` documents in
+`tmtroot/generated/crates` must reflect the code without manual drift.
+
+---[ Guard ]---
+
+`twrit check .` validates that all extracted `.tmt` files match the source
+code. Run `twrit api .` or `twrit check --fix .` to regenerate.

@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]
 #[command(
@@ -78,6 +78,14 @@ pub enum Command {
     /// cannot be rendered is shown as an error page with status 500, so the
     /// browser tells you what is wrong. Stop it with Ctrl+C.
     Serve(ServeArgs),
+    /// Generate the CLI reference specification in `.tmt` format from the
+    /// clap definitions.
+    ///
+    /// Prints to standard output when `--out` is omitted. With `--out`, writes
+    /// `cli.tmt` into the given directory (or to the named file). With
+    /// `--check`, exits 1 if the file on disk disagrees with the generated
+    /// specification, without writing anything.
+    Spec(SpecArgs),
     /// Run a tool or extension with the rest of the command line, unchanged:
     /// `sisho tomet format -i .` is `tomet format -i .`. `sisho shelf build` is
     /// `tomet-shelf build`. An extension `sisho-<word>` found on `PATH` is run
@@ -171,4 +179,24 @@ pub struct ServeArgs {
     /// `<html lang="...">` for the page shell. Defaults to "ja".
     #[arg(long)]
     pub lang: Option<String>,
+}
+
+/// Target specification to generate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum SpecTarget {
+    /// CLI commands, arguments, and options derived from clap definitions.
+    Cli,
+}
+
+#[derive(Args)]
+pub struct SpecArgs {
+    /// Documentation target to generate (`cli`).
+    #[arg(value_name = "TARGET")]
+    pub target: Option<SpecTarget>,
+    /// Write to this file or directory instead of standard output.
+    #[arg(short, long)]
+    pub out: Option<PathBuf>,
+    /// Fail if the output file is missing or out of date, without writing.
+    #[arg(long, requires = "out")]
+    pub check: bool,
 }

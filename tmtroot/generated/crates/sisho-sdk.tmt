@@ -1,0 +1,40 @@
+@kind(api)
+
+@meta{crate: sisho-sdk, dependencies: list(), dependents: list(sisho-cli)}
+
+=[sisho-sdk]
+
+Layer 0: SDK and protocol definitions for `sisho` extensions.
+
+An extension is an independent subprocess on `PATH` named `sisho-<word>`.
+This crate provides definitions and utilities for extension developers:
+
+- `info` disclosure protocol (`--sisho-extension-info`).:Metadata
+- `jobserver` Jobserver coordination via [`jobserver_gate`].:GNU
+
+==[Module info]
+
+Extension metadata disclosure protocol (`--sisho-extension-info`).
+
+An extension can disclose its name, version, description, and capabilities
+by responding to `--sisho-extension-info` with a single JSON object.
+
+===[Structs]
+
+====[struct ExtensionInfo]
+
+Metadata disclosed by an extension when queried with `--sisho-extension-info`.
+
+====[struct Capabilities]
+
+Feature capabilities disclosed by an extension.
+
+===[Constants]
+
+====[const CURRENT_SCHEMA_VERSION]
+
+Current schema version for extension metadata.
+
+====[const EXTENSION_INFO_FLAG]
+
+The standard CLI flag that requests extension metadata.

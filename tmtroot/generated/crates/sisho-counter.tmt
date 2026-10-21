@@ -1,0 +1,88 @@
+@kind(api)
+
+@meta{crate: sisho-counter, dependencies: list(sisho-run, sisho-tools, sisho-vault), dependents: list(sisho-cli)}
+
+=[sisho-counter]
+
+The operating dashboard and counter for sisho.
+
+Two-tier design:
+
+- @strong[Board]: Status of tools, extensions, integrity check outcomes, and broken links.
+- @strong[Counter]: Action prompt bar to run check, fix, check-links, or open desk.
+
+==[Module editor]
+
+===[Functions]
+
+====[fn resolve_editor]
+
+Resolve an editor command to open `file` at `line`.
+
+Precedence chain:
+1. `$SISHO_EDITOR` (handles `{file}`, `{line}`, `{col}` templates, extension words, or commands)
+2. `$VISUAL` (Unix full-screen editor: nvim, vim, hx, etc.)
+3. `$EDITOR` (Unix standard editor)
+4. `sisho-desk` (if installed and active)
+5. `nano` (system fallback)
+
+====[fn resolve_editor_with_lookup]
+
+==[Module model]
+
+===[Structs]
+
+====[struct ExtensionItem]
+
+An extension presented on the Board.
+
+====[struct ToolStatus]
+
+Status of a core tool.
+
+====[struct Model]
+
+The state of the counter and board.
+
+===[Enums]
+
+====[enum StepSlot]
+
+A slot representing a check step in progress or completed.
+
+====[enum FocusedPane]
+
+The currently focused pane on the Board.
+
+====[enum WorkerMessage]
+
+Messages sent from background threads to the model.
+
+==[Module screen]
+
+===[Structs]
+
+====[struct Screen]
+
+Terminal guard: manages raw mode, alternate screen, and mouse capture.
+Ensures terminal is restored to normal state even on panic or error.
+
+===[Functions]
+
+====[fn restore_terminal]
+
+Restore the terminal to cooked mode and exit alternate screen. Safe to call multiple times.
+
+==[Module ui]
+
+===[Functions]
+
+====[fn draw]
+
+Render the complete sisho-counter interface (Board + Counter).
+
+==[Functions]
+
+===[fn run]
+
+Run the interactive counter TUI.

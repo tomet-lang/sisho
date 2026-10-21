@@ -10,6 +10,7 @@ pub mod check_links;
 pub mod convert;
 pub mod fix;
 pub mod serve;
+pub mod spec;
 pub mod tool;
 
 use std::io::{self, Write};

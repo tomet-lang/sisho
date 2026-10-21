@@ -45,6 +45,7 @@ tomet-markdown = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-pandoc = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-typst = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-html = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-spec = { git = "https://github.com/tomet-lang/tomet.git" }
 
 #= Concurrency
 jobserver-gate = { git = "https://github.com/tomet-lang/jobserver-gate.git" }

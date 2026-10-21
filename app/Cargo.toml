@@ -22,9 +22,17 @@ sisho-serve = { workspace = true }
 sisho-tools = { workspace = true }
 sisho-vault = { workspace = true }
 
+#= Tomet
+tomet-load-config = { workspace = true }
+tomet-spec = { workspace = true }
+
 #= Crates.io
 anyhow = { workspace = true }
 clap = { workspace = true }
 jobserver = { workspace = true }
 mimalloc = { workspace = true }
 serde_json = { workspace = true }
+
+[dev-dependencies]
+tomet-ast = { workspace = true }
+tomet-parser = { workspace = true }
