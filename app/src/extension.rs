@@ -50,8 +50,8 @@ pub enum ExtensionStatus {
 }
 
 /// Run `sisho --list`: scan `PATH` and print installed extensions.
-pub fn list(all: bool) -> ExitCode {
-    let result = with_standard_streams(|out, _err| run_list(out, all));
+pub fn list(all: bool, verbose: bool) -> ExitCode {
+    let result = with_standard_streams(|out, _err| run_list(out, all, verbose));
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) if is_broken_pipe(&error) => ExitCode::from(BROKEN_PIPE),
@@ -63,13 +63,18 @@ pub fn list(all: bool) -> ExitCode {
 }
 
 /// Write the list of extensions to `out`.
-pub fn run_list(out: &mut dyn Write, all: bool) -> Result<()> {
+pub fn run_list(out: &mut dyn Write, all: bool, verbose: bool) -> Result<()> {
     let entries = scan();
-    format_entries(out, &entries, all)
+    format_entries(out, &entries, all, verbose)
 }
 
 /// Format and write `entries` to `out`.
-pub fn format_entries(out: &mut dyn Write, entries: &[ExtensionEntry], all: bool) -> Result<()> {
+pub fn format_entries(
+    out: &mut dyn Write,
+    entries: &[ExtensionEntry],
+    all: bool,
+    verbose: bool,
+) -> Result<()> {
     let mut visible: Vec<&ExtensionEntry> = entries
         .iter()
         .filter(|entry| {
@@ -94,6 +99,32 @@ pub fn format_entries(out: &mut dyn Write, entries: &[ExtensionEntry], all: bool
         match &entry.status {
             ExtensionStatus::Active => {
                 writeln!(out, "{:width$}  {}", entry.word, entry.path.display())?;
+                if verbose {
+                    if let Some(info) = query_info(&entry.path) {
+                        if info.word == entry.word {
+                            let mut details = Vec::new();
+                            if !info.version.is_empty() {
+                                let ver = if info.version.starts_with('v') || info.version.starts_with('V') {
+                                    info.version.clone()
+                                } else {
+                                    format!("v{}", info.version)
+                                };
+                                details.push(ver);
+                            }
+                            if !info.about.is_empty() {
+                                details.push(info.about.clone());
+                            }
+                            let caps = format_capabilities(&info.capabilities);
+                            if !caps.is_empty() {
+                                details.push(format!("[{caps}]"));
+                            }
+                            if !details.is_empty() {
+                                let indent = " ".repeat(width + 2);
+                                writeln!(out, "{indent}{}", details.join("  "))?;
+                            }
+                        }
+                    }
+                }
             }
             ExtensionStatus::ShadowedByBuiltin => {
                 writeln!(
@@ -116,6 +147,22 @@ pub fn format_entries(out: &mut dyn Write, entries: &[ExtensionEntry], all: bool
     }
 
     Ok(())
+}
+
+fn format_capabilities(caps: &sisho_sdk::Capabilities) -> String {
+    let mut list = Vec::new();
+    if caps.tui {
+        list.push("tui");
+    }
+    if caps.interactive {
+        list.push("interactive");
+    }
+    for (k, v) in &caps.extra {
+        if v.as_bool() == Some(true) {
+            list.push(k.as_str());
+        }
+    }
+    list.join(", ")
 }
 
 /// Scan directories on `PATH` for extensions.
@@ -211,16 +258,49 @@ fn is_executable(path: &Path) -> bool {
 
 /// Query an extension executable for its metadata using `--sisho-extension-info`.
 ///
+/// Enforces a strict 500ms timeout and discards output on failure or timeout.
 /// Returns `None` if the executable does not support the protocol or fails.
-#[allow(dead_code)]
 pub fn query_info(path: &Path) -> Option<sisho_sdk::ExtensionInfo> {
-    let outcome = sisho_run::Step::new("extension-info", path)
+    const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(500);
+    const POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(5);
+
+    let mut child = std::process::Command::new(path)
         .arg(sisho_sdk::EXTENSION_INFO_FLAG)
-        .run();
-    if outcome.status == sisho_run::Status::Passed {
-        sisho_sdk::ExtensionInfo::from_json_str(&outcome.stdout).ok()
-    } else {
-        None
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .ok()?;
+
+    let start = std::time::Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                if !status.success() {
+                    return None;
+                }
+                let mut stdout_buf = Vec::new();
+                if let Some(mut stream) = child.stdout.take() {
+                    use std::io::Read;
+                    let _ = stream.read_to_end(&mut stdout_buf);
+                }
+                let text = std::str::from_utf8(&stdout_buf).ok()?;
+                return sisho_sdk::ExtensionInfo::from_json_str(text).ok();
+            }
+            Ok(None) => {
+                if start.elapsed() >= TIMEOUT {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return None;
+                }
+                std::thread::sleep(POLL_INTERVAL);
+            }
+            Err(_) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return None;
+            }
+        }
     }
 }
 
@@ -247,5 +327,22 @@ mod tests {
     #[test]
     fn query_info_returns_none_for_missing_or_unsupported_binary() {
         assert_eq!(query_info(Path::new("/non/existent/sisho-tool")), None);
+    }
+
+    #[test]
+    fn format_capabilities_formats_tui_interactive_and_extra() {
+        let mut caps = sisho_sdk::Capabilities {
+            tui: true,
+            interactive: false,
+            extra: std::collections::BTreeMap::new(),
+        };
+        assert_eq!(format_capabilities(&caps), "tui");
+
+        caps.interactive = true;
+        assert_eq!(format_capabilities(&caps), "tui, interactive");
+
+        caps.extra.insert("custom".to_string(), serde_json::json!(true));
+        caps.extra.insert("ignored".to_string(), serde_json::json!(false));
+        assert_eq!(format_capabilities(&caps), "tui, interactive, custom");
     }
 }

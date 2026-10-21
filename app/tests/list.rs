@@ -190,3 +190,80 @@ fn all_flag_without_list_is_rejected_as_usage_error() {
     assert_eq!(code(&output), 2);
     assert!(stderr(&output).contains("--list"));
 }
+
+#[test]
+fn verbose_flag_without_list_is_rejected_as_usage_error() {
+    let sandbox = Sandbox::new("list-v-err");
+    let output = sandbox.sisho(&["-v"], "");
+    assert_eq!(code(&output), 2);
+    assert!(stderr(&output).contains("--list"));
+
+    let output2 = sandbox.sisho(&["--verbose"], "");
+    assert_eq!(code(&output2), 2);
+    assert!(stderr(&output2).contains("--list"));
+}
+
+fn make_script(dir: &std::path::Path, name: &str, content: &str) -> std::path::PathBuf {
+    let path = dir.join(name);
+    fs::write(&path, content).unwrap();
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
+    path
+}
+
+#[test]
+fn list_verbose_displays_extension_metadata() {
+    let sandbox = Sandbox::new("list-verbose-metadata");
+    let script = r#"#!/bin/sh
+if [ "$1" = "--sisho-extension-info" ]; then
+    echo '{"schema_version":1,"word":"desk","version":"0.2.0","about":"Desktop interface for Tomet vaults","capabilities":{"tui":true,"interactive":true}}'
+    exit 0
+fi
+echo "desk"
+"#;
+    let ext_path = make_script(&sandbox.dir, "sisho-desk", script);
+
+    let output = sandbox.sisho(&["--list", "-v"], "");
+    assert_eq!(code(&output), 0);
+    let text = stdout(&output);
+    let lines: Vec<&str> = text.lines().collect();
+    assert_eq!(lines.len(), 2);
+    assert_eq!(lines[0], format!("desk      {}", ext_path.display()));
+    assert_eq!(
+        lines[1],
+        "          v0.2.0  Desktop interface for Tomet vaults  [tui, interactive]"
+    );
+}
+
+#[test]
+fn list_verbose_fallback_when_not_supporting_info() {
+    let sandbox = Sandbox::new("list-verbose-fallback");
+    let script = "#!/bin/sh\nexit 1\n";
+    let ext_path = make_script(&sandbox.dir, "sisho-desk", script);
+
+    let output = sandbox.sisho(&["--list", "--verbose"], "");
+    assert_eq!(code(&output), 0);
+    let text = stdout(&output);
+    let lines: Vec<&str> = text.lines().collect();
+    assert_eq!(lines.len(), 1);
+    assert_eq!(lines[0], format!("desk      {}", ext_path.display()));
+}
+
+#[test]
+fn list_verbose_times_out_and_discards_output_when_hanging() {
+    let sandbox = Sandbox::new("list-verbose-timeout");
+    let script = "#!/bin/sh\nwhile :; do :; done\n";
+    let ext_path = make_script(&sandbox.dir, "sisho-desk", script);
+
+    let start = std::time::Instant::now();
+    let output = sandbox.sisho(&["--list", "-v"], "");
+    let elapsed = start.elapsed();
+
+    assert_eq!(code(&output), 0);
+    // Timeout is 500ms, so it should finish well under 2 seconds.
+    assert!(elapsed < std::time::Duration::from_millis(1500));
+    assert!(elapsed >= std::time::Duration::from_millis(450));
+    let text = stdout(&output);
+    let lines: Vec<&str> = text.lines().collect();
+    assert_eq!(lines.len(), 1);
+    assert_eq!(lines[0], format!("desk      {}", ext_path.display()));
+}

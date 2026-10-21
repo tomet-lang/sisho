@@ -43,9 +43,11 @@ Built-in commands (`check`, `fix`, `check-links`, `convert`, `serve`) and known 
    - When the same extension word appears multiple times in different `PATH` directories, only the first occurrence (the one that would run) is shown by default.
 4. **`--all` flag**:
    - `sisho --list --all`: also displays duplicate programs found later in `PATH`, annotated with `(shadowed by <first_path>)`.
-5. **Exit codes**:
+5. **`-v, --verbose` flag**:
+   - `sisho --list -v`: queries active extensions for metadata using `--sisho-extension-info` (with a strict 500ms timeout) and prints version, summary, and capabilities indented on a second line below each active entry. Discards output and omits the extra line if the extension does not support `--sisho-extension-info`, times out, or fails.
+6. **Exit codes**:
    - 0 on success (an empty list when no extensions are found is a success).
-   - 2 on usage error (e.g. invalid arguments).
+   - 2 on usage error (e.g. invalid arguments, or `--all` / `-v` passed without `--list`).
    - 141 if standard output is closed (broken pipe).
 
 =[ Extension Protocols ]
@@ -64,7 +66,7 @@ An extension may optionally implement `--sisho-extension-info` to report its met
    - `capabilities`: optional map of boolean features (e.g. `{"tui": true, "interactive": false}`).
 2. **Execution rules**:
    - `sisho` does not execute `--sisho-extension-info` during regular discovery (`sisho --list` by default) to keep listing instant.
-   - Any query executing `--sisho-extension-info` (e.g. for rich dashboards) must enforce a strict timeout (e.g. 500ms) and discard output on failure.
+   - Any query executing `--sisho-extension-info` (such as `sisho --list -v` or rich dashboards) must enforce a strict timeout (e.g. 500ms) and discard output on failure.
 
 ==[ Cooperative Concurrency: GNU Jobserver ]
 

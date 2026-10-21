@@ -25,6 +25,10 @@ pub struct Cli {
     #[arg(long, requires = "list")]
     pub all: bool,
 
+    /// Show metadata reported by extensions.
+    #[arg(short = 'v', long = "verbose", requires = "list")]
+    pub verbose: bool,
+
     #[command(subcommand)]
     pub command: Option<Command>,
 }

@@ -33,7 +33,7 @@ fn main() -> ExitCode {
     };
 
     if cli.list {
-        return extension::list(cli.all);
+        return extension::list(cli.all, cli.verbose);
     }
 
     if let Err(error) = init_jobserver(cli.jobs.map(|n| n.get())) {
