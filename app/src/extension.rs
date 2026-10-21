@@ -209,6 +209,21 @@ fn is_executable(path: &Path) -> bool {
     metadata.is_file()
 }
 
+/// Query an extension executable for its metadata using `--sisho-extension-info`.
+///
+/// Returns `None` if the executable does not support the protocol or fails.
+#[allow(dead_code)]
+pub fn query_info(path: &Path) -> Option<sisho_sdk::ExtensionInfo> {
+    let outcome = sisho_run::Step::new("extension-info", path)
+        .arg(sisho_sdk::EXTENSION_INFO_FLAG)
+        .run();
+    if outcome.status == sisho_run::Status::Passed {
+        sisho_sdk::ExtensionInfo::from_json_str(&outcome.stdout).ok()
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -227,5 +242,10 @@ mod tests {
         assert!(!is_valid_word("../x"));
         assert!(!is_valid_word("foo.bar"));
         assert!(!is_valid_word("foo bar"));
+    }
+
+    #[test]
+    fn query_info_returns_none_for_missing_or_unsupported_binary() {
+        assert_eq!(query_info(Path::new("/non/existent/sisho-tool")), None);
     }
 }

@@ -20,7 +20,7 @@ does not relax the rule to fit the change it wanted to make.
   layers: {
     2: list( "app" )
     1: list( "crates/sisho-tools", "crates/sisho-vault", "crates/sisho-serve", "crates/sisho-counter" )
-    0: list( "crates/sisho-run" )
+    0: list( "crates/sisho-run", "crates/sisho-sdk" )
   }
 }
 
@@ -28,7 +28,8 @@ Every workspace member belongs to exactly one layer, and depends only on
 layers strictly below its own. Same-layer dependencies are allowed;
 upward ones are not.
 
-Layer 0 runs commands and knows no tool by name. Layer 1 holds what `sisho`
+Layer 0 runs commands and knows no tool by name (`sisho-run`), and provides
+the extension SDK protocol types (`sisho-sdk`). Layer 1 holds what `sisho`
 knows about the core tools (`sisho-tools`) and what it implements itself
 (`sisho-vault`, `sisho-serve`, `sisho-counter`). Layer 2 is the program.
 

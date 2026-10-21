@@ -47,3 +47,28 @@ Built-in commands (`check`, `fix`, `check-links`, `convert`, `serve`) and known 
    - 0 on success (an empty list when no extensions are found is a success).
    - 2 on usage error (e.g. invalid arguments).
    - 141 if standard output is closed (broken pipe).
+
+=[ Extension Protocols ]
+
+Extensions operate as independent subprocesses, but may optionally adopt standard conventions to integrate more richly with `sisho` and the system.
+
+==[ Metadata Disclosure: `--sisho-extension-info` ]
+
+An extension may optionally implement `--sisho-extension-info` to report its metadata as a single JSON object to standard output and exit 0.
+
+1. **Schema**:
+   - `schema_version`: integer, currently `1`.
+   - `word`: must match the extension's word (e.g. `"desk"`).
+   - `version`: version string, conforming to SemVer.
+   - `about`: one-line summary of what the extension does.
+   - `capabilities`: optional map of boolean features (e.g. `{"tui": true, "interactive": false}`).
+2. **Execution rules**:
+   - `sisho` does not execute `--sisho-extension-info` during regular discovery (`sisho --list` by default) to keep listing instant.
+   - Any query executing `--sisho-extension-info` (e.g. for rich dashboards) must enforce a strict timeout (e.g. 500ms) and discard output on failure.
+
+==[ Cooperative Concurrency: GNU Jobserver ]
+
+When `sisho` invokes an extension, it inherits the process jobserver environment variables and file descriptors (configured via GNU jobserver in `sisho-run`).
+
+1. **Resource sharing**: Extensions performing parallel work (e.g. parallel file searches or conversions) should respect jobserver tokens to avoid oversaturating available CPUs.
+2. **`sisho-sdk`**: An optional, minimal SDK crate (`sisho-sdk`) is provided for Rust extension authors to implement metadata disclosure and participate in the jobserver protocol without boilerplate.

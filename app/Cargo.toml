@@ -17,6 +17,7 @@ tui = ["dep:sisho-counter"]
 [dependencies]
 sisho-counter = { workspace = true, optional = true }
 sisho-run = { workspace = true }
+sisho-sdk = { workspace = true }
 sisho-serve = { workspace = true }
 sisho-tools = { workspace = true }
 sisho-vault = { workspace = true }

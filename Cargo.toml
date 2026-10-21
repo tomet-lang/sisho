@@ -7,6 +7,7 @@ members = [
   "crates/sisho-tools",
   "crates/sisho-vault",
   "crates/sisho-serve",
+  "crates/sisho-sdk",
 ]
 
 default-members = ["app"]
@@ -24,6 +25,7 @@ sisho-run = { path = "crates/sisho-run" }
 sisho-tools = { path = "crates/sisho-tools" }
 sisho-vault = { path = "crates/sisho-vault" }
 sisho-serve = { path = "crates/sisho-serve" }
+sisho-sdk = { path = "crates/sisho-sdk" }
 
 #= Tomet -- internal crates, as twrit takes them; the facade is not for apps
 tomet-ast = { git = "https://github.com/tomet-lang/tomet.git" }
@@ -55,6 +57,7 @@ crossterm = "0.28"
 jobserver = "0.1"
 mimalloc = { version = "0.1", default-features = false }
 ratatui = "0.29"
+serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 tokio = { version = "1", features = ["rt-multi-thread", "net"] }
 

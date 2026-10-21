@@ -52,6 +52,11 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
   -. `--all` フラグ: `sisho --list --all` で、`PATH` の 2 つ目以降で隠蔽されている同名プログラムも `(shadowed by <first_path>)` 付きですべて表示できる。
   -. 機械可読出力 (`--json`): 現時点では見送り。TUI はプロセス内の関数を直接呼べばよく、不要なキー規約の固定を避ける。
   -. 実装の配置: `commands/` のサブコマンドではなく、拡張機能の知識（探索、一覧、単語判定）を持つ独立モジュール `app/src/extension.rs` に集約する。探索関数 `scan()` は `self-tui` からも直接利用できる。`sisho-tools` は `tools-by-subprocess`（`std::fs` 不可）であり、新 crate 追加による `.writ.tmt` 変更を避けるため `app` 内に配置した。
+- (2026-10-21 決定) 拡張開発者向け補助 SDK (`sisho-sdk`) の新設とプロトコル策定。
+  -. 位置づけ: 拡張コマンド (`sisho-<word>`) は独立子プロセスであり、プロトコル（CLI 引数、終了コード、JSON）は言語非依存。`sisho-sdk` は必須のフレームワークではなく、Rust で拡張を書く開発者が定型処理（メタデータ開示や jobserver 連携）を安全に実装するためのオプショナルな補助 SDK（`cargo-metadata` や `clap-cargo` と同様の位置づけ）。
+  -. メタデータ開示: `--sisho-extension-info` を受け取った拡張は、バージョンや説明文 (`about`)、機能 (`capabilities`) を単一の JSON オブジェクトとして標準出力に出して終了コード 0 で終わる。`sisho --list` やダッシュボード (`sisho-counter`) での豊かな情報表示に使う。
+  -. 並列実行・jobserver 連携: `sisho` が子プロセス起動時に引き渡す GNU jobserver の環境変数と記述子を、拡張側で安全に解釈・参加するためのヘルパーを提供する。
+  -. クレート配置: レイヤー 0 (`crates/sisho-sdk`)。`sisho` の内部ランタイム (`sisho-run` や `sisho-vault`) に一切依存せず、純粋なプロトコル型と最小限のヘルパー（`serde`, `serde_json`, `jobserver`）のみを持つ。
 
 ===[ 動詞 ]
 

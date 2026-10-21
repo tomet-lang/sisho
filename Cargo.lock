@@ -1216,6 +1216,7 @@ dependencies = [
  "serde_json",
  "sisho-counter",
  "sisho-run",
+ "sisho-sdk",
  "sisho-serve",
  "sisho-tools",
  "sisho-vault",
@@ -1238,6 +1239,15 @@ name = "sisho-run"
 version = "0.1.0"
 dependencies = [
  "jobserver",
+]
+
+[[package]]
+name = "sisho-sdk"
+version = "0.1.0"
+dependencies = [
+ "jobserver",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
