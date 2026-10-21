@@ -1,12 +1,12 @@
 //! Layer 0: SDK and protocol definitions for `sisho` extensions.
 //!
 //! An extension is an independent subprocess on `PATH` named `sisho-<word>`.
-//! This crate provides optional, minimal helpers for extension developers:
+//! This crate provides definitions and utilities for extension developers:
 //! - [`info`]: Metadata disclosure protocol (`--sisho-extension-info`).
-//! - [`jobserver`]: Cooperative parallelism via GNU Jobserver tokens.
+//! - [`jobserver`]: GNU Jobserver coordination via [`jobserver_gate`].
 
 pub mod info;
-pub mod jobserver;
+pub use jobserver_gate as jobserver;
 
 pub use info::{
     CURRENT_SCHEMA_VERSION, Capabilities, EXTENSION_INFO_FLAG, ExtensionInfo,

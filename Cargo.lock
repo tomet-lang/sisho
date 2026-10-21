@@ -701,6 +701,7 @@ dependencies = [
 [[package]]
 name = "jobserver-gate"
 version = "0.1.0"
+source = "git+https://github.com/tomet-lang/jobserver-gate.git#2df56f2241e12dcabb0c7e34fd22127c345d1d5a"
 dependencies = [
  "jobserver",
 ]
