@@ -10,11 +10,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1792819753,
-        "narHash": "sha256-Dk1QXjHsSl2jsbM6cpgG5QejxZEVL74JhVD8XYGESVo=",
+        "lastModified": 1792826888,
+        "narHash": "sha256-JOrkV/RT+YUlPAyF+jzIaGabC78mGuFmkg1XJnMMGPg=",
         "owner": "tomet-lang",
         "repo": "fs-catasto",
-        "rev": "555ea70637e0db89fb383bcfc871b50d4ffa3b57",
+        "rev": "c7af7621fb790dd5ebe6e0c4b157d36bbb4622e7",
         "type": "github"
       },
       "original": {
