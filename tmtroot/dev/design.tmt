@@ -30,7 +30,7 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - コア 3 つ(tomet・twrit・tandr)は sisho が直書きで知っている。自己申告や探索の仕組みは入れない。
 - 横断の動詞は、各ツールを子プロセスとして呼ぶ。crate として取り込まない。twrit が tomet のあるリビジョンを固定し、sisho が別のリビジョンを固定すると、同じ型が 2 つのバージョンで存在する菱形依存になるため。
 - sisho が自前で実装するもの(`check-links` と `sisho spec`。2026-10-24 までは変換系も)だけ、tomet の crate を git 依存で使う。変換は tomet のコマンドを呼ぶ(「変換系」の節)。入口は facade(`crates/tomet`)ではなく、内部 crate を直接使う。facade は `apps/*` が使わないよう意図して作られていて、コマンドが必要とする `tomet-workspace`・`tomet-indexer`・`tomet-lexer`・`tomet-load-config` を持たない(2026-10-18 にコードで確認。当初の「入口は facade」は誤りだった)。twrit も同じく内部 crate を直接使っている。
-- 固定は `Cargo.lock` で行う。ローカル開発では、gitignore 済みの `.cargo/config.toml` の `[patch]` で隣のチェックアウトに向ける(twrit と同じ)。
+- 固定は `Cargo.lock` で行う。隣のチェックアウトで試したい変更も、push してから `cargo update` で取り込む。`.cargo/config.toml` の `[patch]` は使わない(`Cargo.lock` に path が書かれて `source` が消え、Nix のビルドが取りに行けなくなる。2026-10-24 に sisho-desk で実際に起きた)。
 - ツール間の約束は小さく保つ。終了コード、`--json`、`--version`。
 - バージョンのずれは、Nix に頼らずに、実行時に最低の版を確かめて解く(2026-10-18、cargo の `rust-version` と同じ形)。sisho は各ツールの最低の版を持ち(いまは tomet が 0.4.0、twrit が 0.2.0。tomet は 2026-10-24 に、変換の入力と出力先を 6 つのコマンドで揃えた 0.4.0 へ上げた)、`check` と `fix` の頭で `--version` を読んで比べる。古い、または版を返せないツールは、「`tomet version`」という失敗のステップとして報告の先頭に出て、`update tomet` と言う。`check` は読み取りだけなので、そのまま続ける。`fix` は書き込むので、何も書かずに 1 で終わる。入っていないツールは、そのツール自身のステップが「not found」と言うので、重ねては言わない。
 - Nix は開発環境の話で、製品の約束ではない。全員が Nix を使うとは限らないので、sisho は `flake.nix` を読まない。Nix の利用者に「sisho を入れると合う tomet と twrit も付いてくる」包装は、別のリポジトリではなく、sisho の flake 自身が出す(2026-10-18、「Nix で束ねる」の節)。非 Nix の側に当たるのは rustup で、将来 sisho が担うかもしれないが、いまの範囲の外。
@@ -202,6 +202,15 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - `github:tomet-lang/tomet-writ`(twrit の旧名)を指していた入力は、この切り替えでなくなった。
 - (2026-10-20、利用者と決めた。)初期の TUI (`sisho tui`) を独立リポジトリ `sisho-desk` (`sisho desk`) へ切り出したことに伴い、`toolchain` に `sisho-desk` を加えた (`sisho`・`tomet`・`twrit`・`sisho-desk` の 4 つ)。初心者が `sisho desk` と叩いたときに別のパッケージの追加なしで届くようにするため。`sisho-desk` の flake 入力のうち開発用ツール (`tomet` と `twrit`) は、sisho の側で `inputs.tomet.follows = ""`・`inputs.twrit.follows = ""` として切る。nixpkgs・crane・fenix は自前のものを保ち、バイナリキャッシュを活かす。sisho の `flake.lock` は 32 ノードから 40 ノードになった (sisho-desk 自身のノードと開発用以外の入力分で +8)。
 
+===[ catasto を足す ]
+
+- (2026-10-24、利用者と決めた。)fs-catasto(コマンドは `catasto`)を、sisho が知るツールに足す。語彙のような共有ファイルを置くのは catasto で、tomet と twrit はそれを読むだけ。置かれたものがずれても、これまでの `sisho check` は気づけなかった。
+- `check` に `catasto check` を足す。読み取りだけで、ネットワークに触れず、ずれがあれば 1 で終わる。`catasto.motm` がないリポジトリでは検査するものがなく、何も言わずに 0 で終わる。だから sisho は条件を持たない。「各ツールが自分で、見るものがあるかを決める」という上の原則のままで、`sisho-tools` に `std::fs` も入らない。最初に考えた「`catasto.motm` があるときだけ走らせる」案は、この原則に反するので捨てた。
+- 最低の版は 0.1.0(`--version` を最初から返している)。`Tool::ALL` の最後に足し、報告の並びと既存の添字は動かさない。
+- `fix` に `catasto sync` は入れない(未決)。`sync` は、コミットがキャッシュにないときにネットワークへ出て、手で書き換えられた管理対象のファイルを、ロックの内容に戻す。`fix` が、人の手の入ったファイルを元に戻すことは、今までなかった。`--update` は `fix` に入れない。必要なときは `sisho catasto sync` で届く。
+- Nix では `toolchain` と dev shell に足す。入力は、`inputs.sisho.follows = ""` で切る(tomet・twrit と同じ)。fs-catasto の dev shell は sisho を入力に持つので、輪になるが、ロックの中で解ける。catasto の包みは、利用者の `PATH` の後ろに `git` を足すので、git が入っていない環境でも `catasto sync` が動く。
+- sisho 自身も、`writ` の語彙を catasto で取る(`catasto.motm` の `::upstreams`)。手でコピーしていた `writ.vocabulary.tmt` は、管理対象のファイルになる。
+
 ==[ 移すときに直す場所 ]
 
 twrit の AGENTS.md と tomet の CLI のコードから見えた依存。
@@ -213,6 +222,7 @@ twrit の AGENTS.md と tomet の CLI のコードから見えた依存。
 
 ==[ 未決 ]
 
+- `fix` に `catasto sync` を足すか。足すなら、手で書き換えられた管理対象のファイルを元に戻すこと、キャッシュにないコミットのためにネットワークへ出ることを、`fix` の約束としてどう書くか。(2026-10-24)
 - `oneline` と `arbor-florifera` は、sisho への切り替えをしていない。同じひな形の書きかけで、`nix/default.nix` が定義されていない `tomet` を参照していて、今は評価できない(oneline は未コミット、arbor-florifera は git リポジトリではない)。書き終えたら、tomet-corpus と同じ変更を入れる。
 - 製品と開発環境を別の flake に分ける整理(各ツールの flake の入力を葉だけにする)。束ねには要らなかった。ツールの flake を sisho 以外から直接取り込む人が増え、開発用の入力が持ち込まれて困るようになったら、再考する。
 - 入力名を変えたツールがあれば、sisho の `flake.lock` の固定を進めて、ノード数を数え直す(切る指定は、固定している版がその入力名を持つときだけ効く)。

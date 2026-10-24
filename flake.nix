@@ -52,6 +52,10 @@
       inputs.tomet.follows = "";
       inputs.twrit.follows = "";
     };
+    catasto = {
+      url = "github:tomet-lang/fs-catasto";
+      inputs.sisho.follows = "";
+    };
   };
 
   outputs = inputs: import ./nix inputs;

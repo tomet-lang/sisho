@@ -8,7 +8,7 @@ use serde_json::Value;
 
 #[test]
 fn fix_runs_in_the_fixed_order_and_keeps_going_after_a_failure() {
-    let sandbox = Sandbox::new("fix").both_tools();
+    let sandbox = Sandbox::new("fix").all_tools();
 
     let text = stdout(&sandbox.sisho(&["fix"], ""));
     // Regenerate, then export what was regenerated, then format the result.
@@ -28,7 +28,7 @@ fn fix_runs_in_the_fixed_order_and_keeps_going_after_a_failure() {
 
 #[test]
 fn fix_has_a_json_form_too() {
-    let sandbox = Sandbox::new("fix-json").both_tools();
+    let sandbox = Sandbox::new("fix-json").all_tools();
     let output = sandbox.sisho(&["fix", "--json"], "");
     let json: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(json["ok"], true);
@@ -42,14 +42,14 @@ fn fix_never_runs_refactor() {
     // Migrating a document re-prints it from its syntax tree, which has no
     // comments. That is the language's own `refactor`, in `tomet`, and it is
     // something to ask for by name; `fix` does not run it.
-    let sandbox = Sandbox::new("no-refactor").both_tools();
+    let sandbox = Sandbox::new("no-refactor").all_tools();
     let output = sandbox.sisho(&["fix", "--verbose"], "");
     assert!(!stdout(&output).contains("refactor"), "{}", stdout(&output));
 }
 
 #[test]
 fn fix_writes_nothing_with_a_tool_older_than_sisho_works_with() {
-    let sandbox = Sandbox::new("fix-old").both_tools();
+    let sandbox = Sandbox::new("fix-old").all_tools();
     let output = sandbox.sisho_with(&["fix"], "", &[("FAKE_VERSION_TWRIT", "0.1.0")]);
     let text = stdout(&output);
 
@@ -64,7 +64,7 @@ fn fix_writes_nothing_with_a_tool_older_than_sisho_works_with() {
 
 #[test]
 fn fix_with_a_tool_older_than_sisho_works_with_has_a_json_form_too() {
-    let sandbox = Sandbox::new("fix-old-json").both_tools();
+    let sandbox = Sandbox::new("fix-old-json").all_tools();
     let output = sandbox.sisho_with(&["fix", "--json"], "", &[("FAKE_NO_VERSION", "tomet")]);
     let json: Value = serde_json::from_slice(&output.stdout).unwrap();
 

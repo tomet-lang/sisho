@@ -66,11 +66,12 @@ fn concurrency_ceiling_holds_for_jobs_flag() {
 
         install_concurrency_tracking_tool(&sandbox.dir, "tomet", &shared_dir);
         install_concurrency_tracking_tool(&sandbox.dir, "twrit", &shared_dir);
+        install_concurrency_tracking_tool(&sandbox.dir, "catasto", &shared_dir);
 
         let output = sandbox.sisho(&["-j", &limit.to_string(), "check"], "");
         let text = stdout(&output);
         assert_eq!(code(&output), 0, "{text}");
-        assert!(text.contains("all 4 steps passed"), "{text}");
+        assert!(text.contains("all 5 steps passed"), "{text}");
 
         let counts_content = fs::read_to_string(shared_dir.join("counts")).unwrap_or_default();
         let max_concurrent: usize = counts_content
@@ -79,10 +80,10 @@ fn concurrency_ceiling_holds_for_jobs_flag() {
             .max()
             .unwrap_or(0);
 
-        // Capacity is reached: exactly min(limit, 4) since 4 steps run
+        // Capacity is reached: exactly min(limit, 5) since 5 steps run
         assert_eq!(
             max_concurrent,
-            limit.min(4),
+            limit.min(5),
             "for -j {limit}, observed max concurrency was {max_concurrent}"
         );
 
@@ -93,11 +94,11 @@ fn concurrency_ceiling_holds_for_jobs_flag() {
             .lines()
             .filter(|l| l.starts_with("auth: ") && !l.contains("--version"))
             .collect();
-        // 4 check steps run
+        // 5 check steps run
         assert_eq!(
             auth_steps.len(),
-            4,
-            "all 4 child check steps must receive jobserver auth, got: {auth_content}"
+            5,
+            "all 5 child check steps must receive jobserver auth, got: {auth_content}"
         );
         assert!(
             !auth_content.contains("no-auth:"),
@@ -114,6 +115,7 @@ fn inherited_jobserver_is_honored_and_wins_over_jobs_flag() {
 
     install_concurrency_tracking_tool(&sandbox.dir, "tomet", &shared_dir);
     install_concurrency_tracking_tool(&sandbox.dir, "twrit", &shared_dir);
+    install_concurrency_tracking_tool(&sandbox.dir, "catasto", &shared_dir);
 
     // Limit 2 = 1 token in pipe + 1 implicit token
     let client = jobserver::Client::new(1).unwrap();
@@ -128,7 +130,7 @@ fn inherited_jobserver_is_honored_and_wins_over_jobs_flag() {
     let output = cmd.output().unwrap();
     let text = stdout(&output);
     assert_eq!(code(&output), 0, "{text}");
-    assert!(text.contains("all 4 steps passed"), "{text}");
+    assert!(text.contains("all 5 steps passed"), "{text}");
 
     let counts_content = fs::read_to_string(shared_dir.join("counts")).unwrap_or_default();
     let max_concurrent: usize = counts_content
@@ -158,6 +160,7 @@ fn passthrough_receives_jobserver_environment() {
 
     install_concurrency_tracking_tool(&sandbox.dir, "tomet", &shared_dir);
     install_concurrency_tracking_tool(&sandbox.dir, "twrit", &shared_dir);
+    install_concurrency_tracking_tool(&sandbox.dir, "catasto", &shared_dir);
 
     let output = sandbox.sisho(&["tomet", "format", "-i", "."], "");
     assert_eq!(code(&output), 0, "{}", stdout(&output));
@@ -171,7 +174,7 @@ fn passthrough_receives_jobserver_environment() {
 
 #[test]
 fn broken_jobserver_prints_warning_and_falls_back() {
-    let sandbox = Sandbox::new("broken").both_tools();
+    let sandbox = Sandbox::new("broken").all_tools();
     let output = sandbox.sisho_with(&["check"], "", &[("MAKEFLAGS", "--jobserver-auth=998,999")]);
     let stderr_text = stderr(&output);
     assert_eq!(code(&output), 0, "{stderr_text}");
@@ -189,7 +192,7 @@ fn broken_jobserver_prints_warning_and_falls_back() {
 
 #[test]
 fn inherited_jobserver_does_not_leak_tokens() {
-    let sandbox = Sandbox::new("leak").both_tools();
+    let sandbox = Sandbox::new("leak").all_tools();
 
     // Client with 1 pipe token
     let client = jobserver::Client::new(1).unwrap();
@@ -218,7 +221,7 @@ fn inherited_jobserver_does_not_leak_tokens() {
 
 #[test]
 fn j_zero_is_rejected_as_usage_error() {
-    let sandbox = Sandbox::new("j-zero").both_tools();
+    let sandbox = Sandbox::new("j-zero").all_tools();
     let output = sandbox.sisho(&["-j", "0", "check"], "");
     assert_eq!(code(&output), 2);
     let stderr_text = stderr(&output);

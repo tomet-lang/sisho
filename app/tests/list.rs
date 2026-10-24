@@ -19,7 +19,7 @@ fn make_file(dir: &std::path::Path, name: &str, executable: bool) -> std::path::
 
 #[test]
 fn none_found_is_success_with_empty_output() {
-    let sandbox = Sandbox::new("list-none").both_tools();
+    let sandbox = Sandbox::new("list-none").all_tools();
     let output = sandbox.sisho(&["--list"], "");
     assert_eq!(code(&output), 0);
     assert_eq!(stdout(&output), "");

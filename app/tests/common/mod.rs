@@ -1,4 +1,4 @@
-//! A directory of fake `tomet` and `twrit` programs on a `PATH` the test
+//! A directory of fake `tomet`, `twrit` and `catasto` programs on a `PATH` the test
 //! controls, so no real tool is needed and every outcome can be produced on
 //! demand. Shared by the tests of the commands that call tools.
 #![allow(dead_code)] // each test file uses some of this, none uses all of it
@@ -46,8 +46,8 @@ impl Sandbox {
         self
     }
 
-    pub fn both_tools(self) -> Self {
-        self.tool("tomet").tool("twrit")
+    pub fn all_tools(self) -> Self {
+        self.tool("tomet").tool("twrit").tool("catasto")
     }
 
     /// Run `sisho` with only this directory on `PATH`.

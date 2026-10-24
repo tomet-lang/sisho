@@ -43,7 +43,7 @@ All Markdown files (`README.md`, `AGENTS.md`) are generated build artifacts, not
 The rules that follow from that memo:
 -| `sisho` has no manifest of its own. Each tool carries its own. If something seems to need a `sisho` setting, treat it as a design question first.
 -| The core tools are called as subprocesses, never linked as crates. Only what `sisho` implements itself (the vault commands moved out of `tomet`: `check-links`, and `sisho spec`) uses `tomet` crates, through git dependencies. Conversions are `tomet`'s: `sisho convert` and `sisho serve` call the `tomet` binary.
--| `sisho` is not a task runner. It does not execute arbitrary commands. The only programs it starts are the tools it knows by name (`tomet`, `twrit`, `tandr`, `tomet-shelf`) and, for `sisho <word>`, a program named `sisho-<word>` on `PATH` (the contract is in `tmtroot/spec/cli/extension.tmt`). Nothing in a vault, a config or a manifest names a program to run.
+-| `sisho` is not a task runner. It does not execute arbitrary commands. The only programs it starts are the tools it knows by name (`tomet`, `twrit`, `catasto`, `tandr`, `tomet-shelf`) and, for `sisho <word>`, a program named `sisho-<word>` on `PATH` (the contract is in `tmtroot/spec/cli/extension.tmt`). Nothing in a vault, a config or a manifest names a program to run.
 
 Read `CONTRIBUTING.md` for the contribution workflow, commit conventions, and verification steps.
 

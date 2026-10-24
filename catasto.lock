@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "files": {
+    "tmtroot/schema/vocabularies/writ@1.0.0.vocabulary.tmt": {
+      "sha256": "3fd2b5b89ae1beb0b0abf1e3fc269f933ca9385876cfb5d005aba730f67acef3",
+      "source": {
+        "git": "https://github.com/tomet-lang/vocabularies.git",
+        "rev": "main",
+        "path": "vocabularies/writ/writ@1.0.0.vocabulary.tmt"
+      },
+      "commit": "25813ecc72785d2f87bf52ad3dcd454a70b6f41a"
+    }
+  }
+}

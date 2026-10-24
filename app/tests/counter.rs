@@ -9,7 +9,7 @@ use common::{Sandbox, code, stderr, stdout};
 
 #[test]
 fn bare_sisho_without_terminal_prints_help_and_exits_2() {
-    let sandbox = Sandbox::new("bare-no-term").both_tools();
+    let sandbox = Sandbox::new("bare-no-term").all_tools();
     let output = Command::new(env!("CARGO_BIN_EXE_sisho"))
         .current_dir(&sandbox.dir)
         .env_clear()

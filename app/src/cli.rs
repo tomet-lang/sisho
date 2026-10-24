@@ -7,7 +7,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 #[command(
     name = "sisho",
     version,
-    about = "Orchestrate the Tomet ecosystem (tomet, twrit, tandr)"
+    about = "Orchestrate the Tomet ecosystem (tomet, twrit, catasto, tandr)"
 )]
 pub struct Cli {
     /// Number of parallel jobs to run.

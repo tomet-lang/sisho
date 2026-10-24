@@ -10,7 +10,7 @@ use common::{Sandbox, code, stderr, stdout};
 
 #[test]
 fn a_tool_name_runs_the_tool_with_the_rest_of_the_command_line() {
-    let sandbox = Sandbox::new("pass-through").both_tools();
+    let sandbox = Sandbox::new("pass-through").all_tools();
     let output = sandbox.sisho(&["tomet", "format", "-i", "."], "");
     assert_eq!(code(&output), 0);
     assert_eq!(stdout(&output), "args: format -i .\n");
@@ -18,7 +18,7 @@ fn a_tool_name_runs_the_tool_with_the_rest_of_the_command_line() {
 
 #[test]
 fn flags_after_a_tool_name_belong_to_the_tool_not_to_sisho() {
-    let sandbox = Sandbox::new("flags").both_tools();
+    let sandbox = Sandbox::new("flags").all_tools();
     assert_eq!(
         stdout(&sandbox.sisho(&["tomet", "--version"], "")),
         "tomet 9.9.9\n"
@@ -32,7 +32,7 @@ fn flags_after_a_tool_name_belong_to_the_tool_not_to_sisho() {
 
 #[test]
 fn the_tools_exit_code_becomes_sishos() {
-    let sandbox = Sandbox::new("exit-code").both_tools();
+    let sandbox = Sandbox::new("exit-code").all_tools();
     assert_eq!(code(&sandbox.sisho(&["tomet", "exit-3"], "")), 3);
     assert_eq!(code(&sandbox.sisho(&["twrit", "exit-0"], "")), 0);
 
@@ -43,7 +43,7 @@ fn the_tools_exit_code_becomes_sishos() {
 
 #[test]
 fn it_hands_over_standard_input() {
-    let sandbox = Sandbox::new("stdin").both_tools();
+    let sandbox = Sandbox::new("stdin").all_tools();
     let mut child = Command::new(env!("CARGO_BIN_EXE_sisho"))
         .args(["tomet", "read-stdin"])
         .env_clear()
@@ -67,7 +67,7 @@ fn a_tool_that_is_not_installed_exits_127() {
 
 #[test]
 fn a_name_that_is_not_a_tool_is_a_usage_error_that_lists_the_tools() {
-    let sandbox = Sandbox::new("unknown").both_tools();
+    let sandbox = Sandbox::new("unknown").all_tools();
     let output = sandbox.sisho(&["cargo", "build"], "");
     assert_eq!(code(&output), 2);
     let text = stderr(&output);
@@ -80,13 +80,13 @@ fn a_name_that_is_not_a_tool_is_a_usage_error_that_lists_the_tools() {
 
 #[test]
 fn an_unknown_verb_is_a_usage_error_too() {
-    let sandbox = Sandbox::new("usage").both_tools();
+    let sandbox = Sandbox::new("usage").all_tools();
     assert_eq!(code(&sandbox.sisho(&["no-such-verb"], "")), 2);
 }
 
 #[test]
 fn the_help_names_every_tool() {
-    let sandbox = Sandbox::new("help").both_tools();
+    let sandbox = Sandbox::new("help").all_tools();
     let text = stdout(&sandbox.sisho(&["--help"], ""));
     assert!(text.contains("Tools: tomet, twrit"), "{text}");
     assert!(
@@ -138,7 +138,7 @@ fn an_extension_hands_over_standard_input() {
 
 #[test]
 fn an_unknown_word_with_no_extension_on_path_exits_2_and_explains_extensions() {
-    let sandbox = Sandbox::new("ext-unknown").both_tools();
+    let sandbox = Sandbox::new("ext-unknown").all_tools();
     let output = sandbox.sisho(&["desk"], "");
     assert_eq!(code(&output), 2);
     let text = stderr(&output);
@@ -184,7 +184,7 @@ fn built_in_commands_and_known_programs_win_over_extensions() {
 
 #[test]
 fn invalid_extension_words_are_usage_errors() {
-    let sandbox = Sandbox::new("ext-invalid").both_tools().tool("sisho-desk");
+    let sandbox = Sandbox::new("ext-invalid").all_tools().tool("sisho-desk");
 
     // Paths, leading hyphens, and upper case must be usage errors (exit 2), never running anything
     assert_eq!(code(&sandbox.sisho(&["../x"], "")), 2);

@@ -16,6 +16,7 @@ fn check_runs_these_commands_in_this_order() {
             "tomet format --check vault",
             "tomet export --check vault",
             "twrit check vault",
+            "catasto check vault",
         ]
     );
 }
@@ -71,7 +72,8 @@ fn step_names_say_what_the_step_does() {
             "tomet check",
             "tomet format --check",
             "tomet export --check",
-            "twrit check"
+            "twrit check",
+            "catasto check",
         ]
     );
 }
@@ -91,6 +93,7 @@ fn a_path_is_passed_through_unchanged() {
 fn programs_are_found_by_word() {
     assert_eq!(program("tomet"), Some(Tool::Tomet.as_program()));
     assert_eq!(program("twrit"), Some(Tool::Twrit.as_program()));
+    assert_eq!(program("catasto"), Some(Tool::Catasto.as_program()));
     assert_eq!(program("shelf"), Some(SHELF));
     assert_eq!(program("cargo"), None);
 }
@@ -200,12 +203,13 @@ mod versions {
     }
 
     #[test]
-    fn both_tools_need_at_least_0_2_0() {
-        for tool in Tool::ALL {
-            assert!(tool.min_version() >= v(0, 2, 0), "{}", tool.name());
-        }
+    fn twrit_needs_at_least_0_2_0_and_catasto_0_1_0() {
+        assert_eq!(Tool::Twrit.min_version(), v(0, 2, 0));
+        assert_eq!(Tool::Catasto.min_version(), v(0, 1, 0));
         assert!(Tool::Twrit.judge(Some("twrit 0.2.0")).is_fine());
         assert!(!Tool::Twrit.judge(Some("twrit 0.1.0")).is_fine());
+        assert!(Tool::Catasto.judge(Some("catasto 0.1.0")).is_fine());
+        assert!(!Tool::Catasto.judge(None).is_fine());
     }
 
     /// `sisho convert` leaves directories, `-` and `--dry-run` to `tomet`,

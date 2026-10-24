@@ -14,13 +14,15 @@ fn step(tool: Tool, args: &[&str], path: &Path) -> Step {
 /// Read-only, so a caller may run them at the same time. Plan order is the
 /// order they are reported in. It is the gate each repository's `docs-check`
 /// has been spelling out by hand: the documents parse, they are formatted,
-/// what they export is up to date, and the repository's written rules hold.
+/// what they export is up to date, the repository's written rules hold, and
+/// the files `catasto` manages are as its lock says.
 pub fn check_steps(path: &Path) -> Vec<Step> {
     vec![
         step(Tool::Tomet, &["check"], path),
         step(Tool::Tomet, &["format", "--check"], path),
         step(Tool::Tomet, &["export", "--check"], path),
         step(Tool::Twrit, &["check"], path),
+        step(Tool::Catasto, &["check"], path),
     ]
 }
 
@@ -31,6 +33,11 @@ pub fn check_steps(path: &Path) -> Vec<Step> {
 /// (`twrit check --fix` rewrites generated API docs), then export what the
 /// documents declare, which may include those generated documents, and format
 /// last, so the formatter sees what the generators and the export produced.
+///
+/// `catasto sync` is not here. It reads the network when a commit is not cached
+/// and puts a managed file back to what the lock says, which no step of `fix`
+/// does to a file someone may have edited. Whether it joins is open (see the
+/// design memo).
 pub fn fix_steps(path: &Path) -> Vec<Step> {
     vec![
         step(Tool::Twrit, &["check", "--fix"], path),

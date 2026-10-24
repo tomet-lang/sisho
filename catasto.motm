@@ -1,0 +1,9 @@
+// The files catasto manages in this workspace. Each key is a path here;
+// `source` is where its canonical content comes from.
+::upstreams{
+  vocabularies: { git: "https://github.com/tomet-lang/vocabularies.git", rev: main, root: vocabularies }
+}
+
+"tmtroot/schema/vocabularies/writ@1.0.0.vocabulary.tmt": {
+  source: { upstream: vocabularies, path: "writ/writ@1.0.0.vocabulary.tmt" }
+}

@@ -13,7 +13,7 @@ ${macro.generated_by(self.path)}
 
 =[ Sisho ]
 
-Orchestrator CLI for the Tomet ecosystem: one entry point over `tomet`, `twrit` and `tandr`.
+Orchestrator CLI for the Tomet ecosystem: one entry point over `tomet`, `twrit`, `catasto` and `tandr`.
 
 ==[ Overview ]
 
@@ -39,9 +39,9 @@ sisho <tool> ...     # run a tool with the rest of the command line, unchanged
 
 Both take `--json`, and `check` and `fix` take `--verbose` to show the output of steps that passed too. One failing step does not stop the others. A tool that is not installed counts as a failure.
 
-`check` runs `tomet check`, `tomet format --check`, `tomet export --check` and `twrit check`: the gate each repository's `docs-check` spelled out by hand. `fix` runs `twrit check --fix`, `tomet export` and `tomet format -i`, in that order. `check-links` is not part of either: it is a command of its own.
+`check` runs `tomet check`, `tomet format --check`, `tomet export --check`, `twrit check` and `catasto check`: the gate each repository's `docs-check` spelled out by hand. `fix` runs `twrit check --fix`, `tomet export` and `tomet format -i`, in that order. `catasto check` has nothing to check where there is no `catasto.motm`, and says nothing then, so `check` needs no condition for it; `fix` does not run `catasto sync` (it reaches the network and puts a managed file back to what `catasto.lock` says), which is left to `sisho catasto sync`. `check-links` is not part of either: it is a command of its own.
 
-`sisho` needs `tomet` and `twrit` to be at least 0.2.0, the version that gave `--version` its meaning, and reads `--version` of each to know. A tool that is older, or that cannot say its version, is a failed step called `<tool> version` first in the report, which says to update it. `check` goes on with the rest, since it only reads. `fix` writes nothing and exits 1, since it would have an older tool rewrite files. A tool that is not installed is reported by its own steps. Nothing here depends on how the tools were installed.
+`sisho` needs `tomet` and `twrit` to be at least 0.2.0, the version that gave `--version` its meaning, and `catasto` 0.1.0, and reads `--version` of each to know. A tool that is older, or that cannot say its version, is a failed step called `<tool> version` first in the report, which says to update it. `check` goes on with the rest, since it only reads. `fix` writes nothing and exits 1, since it would have an older tool rewrite files. A tool that is not installed is reported by its own steps. Nothing here depends on how the tools were installed.
 
 What belongs to the language stays in `tomet`, which `sisho` reaches with `sisho tomet ...`: `sisho tomet new` makes a document from a blueprint, `sisho tomet refactor` migrates old spellings, `sisho tomet export` writes the outputs a document declares for itself.
 
@@ -68,10 +68,10 @@ Nothing in `sisho` needs Nix: it finds `tomet` and `twrit` on `PATH`, however th
 inputs.sisho.url = "github:tomet-lang/sisho";
 
 # in a dev shell:
-packages = [ sisho.packages.${system}.toolchain ];   # sisho, tomet, twrit and sisho-desk
+packages = [ sisho.packages.${system}.toolchain ];   # sisho, tomet, twrit, catasto and sisho-desk
 ```
 
-Packages are `sisho`, `tomet`, `tomet-lsp`, `twrit`, `tomet-shelf` and `sisho-desk`. `toolchain` bundles the core: `sisho`, `tomet`, `twrit` and `sisho-desk`. To choose your own set, as with fenix:
+Packages are `sisho`, `tomet`, `tomet-lsp`, `twrit`, `catasto`, `tomet-shelf` and `sisho-desk`. `toolchain` bundles the core: `sisho`, `tomet`, `twrit`, `catasto` and `sisho-desk`. To choose your own set, as with fenix:
 
 ```nix
 sisho.legacyPackages.${system}.combine [
@@ -85,7 +85,7 @@ Each tool is built as its own flake builds it, so the binary cache of `tomet` se
 ==[ Workspace Layout ]
 
 -| @dir(app) (`sisho-cli`) -- Main CLI binary (`sisho`). Layer 2.
--| @dir(crates/sisho-tools) (`sisho-tools`) -- What `sisho` knows about `tomet`, `twrit` and `tandr`. Layer 1.
+-| @dir(crates/sisho-tools) (`sisho-tools`) -- What `sisho` knows about `tomet`, `twrit`, `catasto` and `tandr`. Layer 1.
 -| @dir(crates/sisho-vault) (`sisho-vault`) -- The vault commands `sisho` does itself: `check-links`. Layer 1.
 -| @dir(crates/sisho-serve) (`sisho-serve`) -- `serve` (it runs `tomet html` for each request), kept apart so the HTTP stack stays out of other builds. Layer 1.
 -| @dir(crates/sisho-counter) (`sisho-counter`) -- Interactive counter dashboard, kept apart so the TUI stack stays out of the core CLI. Layer 1.

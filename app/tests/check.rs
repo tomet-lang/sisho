@@ -8,21 +8,25 @@ use serde_json::Value;
 
 #[test]
 fn check_passes_when_every_tool_passes() {
-    let sandbox = Sandbox::new("pass").both_tools();
+    let sandbox = Sandbox::new("pass").all_tools();
     let output = sandbox.sisho(&["check"], "");
     let text = stdout(&output);
     assert_eq!(code(&output), 0, "{text}");
-    assert!(text.contains("tomet 9.9.9, twrit 9.9.9"), "{text}");
+    assert!(
+        text.contains("tomet 9.9.9, twrit 9.9.9, catasto 9.9.9"),
+        "{text}"
+    );
     assert!(text.contains("✓ tomet check"), "{text}");
     assert!(text.contains("✓ tomet format --check"), "{text}");
     assert!(text.contains("✓ tomet export --check"), "{text}");
     assert!(text.contains("✓ twrit check"), "{text}");
-    assert!(text.contains("all 4 steps passed"), "{text}");
+    assert!(text.contains("✓ catasto check"), "{text}");
+    assert!(text.contains("all 5 steps passed"), "{text}");
 }
 
 #[test]
 fn a_failing_step_fails_the_run_and_shows_why_but_stops_nothing() {
-    let sandbox = Sandbox::new("fail").both_tools();
+    let sandbox = Sandbox::new("fail").all_tools();
     let output = sandbox.sisho(&["check"], "tomet:format");
     let text = stdout(&output);
     assert_eq!(code(&output), 1, "{text}");
@@ -33,7 +37,7 @@ fn a_failing_step_fails_the_run_and_shows_why_but_stops_nothing() {
     assert!(text.contains("✓ tomet check"), "{text}");
     assert!(text.contains("✓ tomet export --check"), "{text}");
     assert!(text.contains("✓ twrit check"), "{text}");
-    assert!(text.contains("1 of 4 steps did not pass"), "{text}");
+    assert!(text.contains("1 of 5 steps did not pass"), "{text}");
 }
 
 #[test]
@@ -49,7 +53,7 @@ fn a_tool_that_is_not_installed_is_a_failure_not_a_skip() {
 
 #[test]
 fn output_of_a_passing_step_is_shown_only_when_asked() {
-    let sandbox = Sandbox::new("verbose").both_tools();
+    let sandbox = Sandbox::new("verbose").all_tools();
 
     let quiet = stdout(&sandbox.sisho(&["check"], ""));
     assert!(!quiet.contains("args: check"), "{quiet}");
@@ -60,7 +64,7 @@ fn output_of_a_passing_step_is_shown_only_when_asked() {
 
 #[test]
 fn the_path_is_handed_to_every_step() {
-    let sandbox = Sandbox::new("path").both_tools();
+    let sandbox = Sandbox::new("path").all_tools();
     let text = stdout(&sandbox.sisho(&["check", "-v", "vault"], ""));
     assert!(text.contains("args: check vault"), "{text}");
     assert!(text.contains("args: format --check vault"), "{text}");
@@ -70,7 +74,7 @@ fn the_path_is_handed_to_every_step() {
 
 #[test]
 fn json_reports_every_step_and_whether_the_run_passed() {
-    let sandbox = Sandbox::new("json").both_tools();
+    let sandbox = Sandbox::new("json").all_tools();
     let output = sandbox.sisho(&["check", "--json"], "tomet:format");
     assert_eq!(code(&output), 1);
 
@@ -88,6 +92,7 @@ fn json_reports_every_step_and_whether_the_run_passed() {
             "tomet format --check",
             "tomet export --check",
             "twrit check",
+            "catasto check",
         ]
     );
     assert_eq!(steps[0]["status"], "passed");
@@ -107,7 +112,7 @@ fn json_marks_a_missing_tool() {
 
 #[test]
 fn json_and_verbose_cannot_be_combined() {
-    let sandbox = Sandbox::new("usage").both_tools();
+    let sandbox = Sandbox::new("usage").all_tools();
     assert_eq!(
         code(&sandbox.sisho(&["check", "--json", "--verbose"], "")),
         2
@@ -116,7 +121,7 @@ fn json_and_verbose_cannot_be_combined() {
 
 #[test]
 fn a_tool_older_than_sisho_works_with_is_a_failed_step_first_in_the_report() {
-    let sandbox = Sandbox::new("old-tool").both_tools();
+    let sandbox = Sandbox::new("old-tool").all_tools();
     let output = sandbox.sisho_with(&["check"], "", &[("FAKE_VERSION_TOMET", "0.1.0")]);
     let text = stdout(&output);
 
@@ -132,12 +137,12 @@ fn a_tool_older_than_sisho_works_with_is_a_failed_step_first_in_the_report() {
         "{text}"
     );
     assert!(text.contains("✓ twrit check"), "{text}");
-    assert!(text.contains("1 of 5 steps did not pass"), "{text}");
+    assert!(text.contains("1 of 6 steps did not pass"), "{text}");
 }
 
 #[test]
 fn a_tool_that_cannot_report_a_version_is_older_than_any_minimum() {
-    let sandbox = Sandbox::new("no-version").both_tools();
+    let sandbox = Sandbox::new("no-version").all_tools();
     let output = sandbox.sisho_with(&["check"], "", &[("FAKE_NO_VERSION", "twrit")]);
     let text = stdout(&output);
 
@@ -152,7 +157,7 @@ fn a_tool_that_cannot_report_a_version_is_older_than_any_minimum() {
 
 #[test]
 fn a_tool_exactly_at_the_minimum_or_above_it_is_fine() {
-    let sandbox = Sandbox::new("new-enough").both_tools();
+    let sandbox = Sandbox::new("new-enough").all_tools();
     for version in ["0.4.0", "0.4.1", "0.10.0", "1.0.0"] {
         let output = sandbox.sisho_with(&["check"], "", &[("FAKE_VERSION_TOMET", version)]);
         assert_eq!(code(&output), 0, "{version}: {}", stdout(&output));
@@ -169,7 +174,7 @@ fn a_tool_that_is_not_installed_is_not_also_a_version_problem() {
 
 #[test]
 fn json_says_what_each_tool_needs_and_lists_a_version_problem_as_a_step() {
-    let sandbox = Sandbox::new("json-needs").both_tools();
+    let sandbox = Sandbox::new("json-needs").all_tools();
     let output = sandbox.sisho_with(&["check", "--json"], "", &[("FAKE_VERSION_TWRIT", "0.1.5")]);
     let json: Value = serde_json::from_slice(&output.stdout).unwrap();
 

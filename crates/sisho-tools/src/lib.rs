@@ -1,7 +1,7 @@
 //! Layer 1: what sisho knows about the core tools.
 //!
-//! For `check` and `fix`, which invocation of `tomet`, `twrit` and `tandr`
-//! to run, and how a pass-through `sisho <word> ...` resolves (see
+//! For `check` and `fix`, which invocation of `tomet`, `twrit`, `catasto` and
+//! `tandr` to run, and how a pass-through `sisho <word> ...` resolves (see
 //! [`Program`]: the tools, and `tomet-shelf`, which is not one of them). The tools are
 //! called as subprocesses through `sisho-run`, never linked as crates (see
 //! the `tools-by-subprocess` rule in the workspace `.writ.tmt`).
@@ -10,7 +10,7 @@
 //! a project does not say which tools apply: each tool decides for itself
 //! whether there is anything for it to look at, and says so when there is not
 //! (`twrit` prints `no .writ.tmt found under .`, `tomet` prints
-//! `OK: 0 file(s)`). So every tool here runs every time.
+//! `OK: 0 file(s)`, `catasto` has no `catasto.motm` and finds nothing to check). So every tool here runs every time.
 //!
 //! Only the steps that run a tool are here. If `sisho` does a step itself
 //! one day, in-process, the program puts it in the plan beside these.

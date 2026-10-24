@@ -14,7 +14,7 @@ The top-level `sisho --help` mentions extensions at the end: "Extensions: a prog
 
 =[ Precedence ]
 
-Built-in commands (`check`, `fix`, `check-links`, `convert`, `serve`) and known programs (`tomet`, `twrit`, `tandr`, `shelf`) always win over an extension of the same word. An executable named `sisho-check` or `sisho-tomet` on `PATH` will never be invoked by `sisho`.
+Built-in commands (`check`, `fix`, `check-links`, `convert`, `serve`) and known programs (`tomet`, `twrit`, `catasto`, `tandr`, `shelf`) always win over an extension of the same word. An executable named `sisho-check` or `sisho-tomet` on `PATH` will never be invoked by `sisho`.
 
 =[ Contract ]
 
