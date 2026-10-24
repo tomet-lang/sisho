@@ -187,20 +187,18 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - 名前は `toolchain`(rustup と fenix が使う語)。中身はコア 3 つ: `sisho`・`tomet`・`twrit`。`tomet-shelf` と `tomet-lsp` は入れない。
 - fenix と同じく選べる。`packages` に個別のもの(`sisho`・`tomet`・`tomet-lsp`・`twrit`・`tomet-shelf`)を出し、`legacyPackages.<system>.combine [ ... ]` で選んだものを束ねる。`combine` は関数なので、パッケージではなく `legacyPackages` に置く(`nix flake show` が警告を出さない)。`default` は `sisho` のまま。
 - 各ツールの開発用の入力は、sisho の flake の 1 か所で `inputs.<名前>.follows = ""` として切る。切るのは他のツールだけで、nixpkgs・crane・fenix は各ツール自身のものを使う。sisho と共有すると各ツールのビルドが自分の flake と変わり、バイナリキャッシュ(tomet.cachix.org)に当たらなくなる。
-- 測った数字: sisho の `flake.lock` は 301 ノードから 32 に。sisho だけを取り込む消費側は 33 ノード(これまでは 179〜732)。
-- 切る指定は、固定している版がその入力名を持っているときだけ効く。tomet-book を tomet-shelf に改めたあと、固定を新しい版へ進める(`nix flake update tomet twrit tomet-shelf`)まで、古い版の `tomet-book` の枝が丸ごと残った(301 → 138 ノード、更新後に 32)。ツール側が入力名を変えたら、sisho の固定を進めて数え直すこと。
+- 切る指定は、固定している版がその入力名を持っているときだけ効く。tomet-book を tomet-shelf に改めたあと、固定を新しい版へ進める(`nix flake update tomet twrit tomet-shelf`)まで、古い版の `tomet-book` の枝が丸ごと残った。ツール側が入力名を変えたら、sisho の固定を進めること。
 - 製品と開発環境を別の flake に分けなくても、束ねはできる(最初は「分けないと束ねられない」と見立てたが、束ね役の側で切る形を測って、誤りと分かった)。分ける整理は、束ねとは独立で、要るかはあとで決める。
 
 切り替えた結果(2026-10-18)。消費側は、ツールの入力 1〜3 個を `sisho` 1 つに置き換えた。
 
 - 開発シェルの道具は、`combine [ sisho.toolchain sisho.tomet-lsp sisho.tomet-shelf ]` のように組み立てる。リポジトリが必要なものだけを足す。
-- ロックのノード数: tomet-corpus 732 → 40、immermemo 504 → 40、tomet-website 477 → 37。
-- ツールのリポジトリ自身(tomet・twrit・tomet-shelf)は、製品を自分のソースからビルドし続け、ほかの道具だけを sisho から取る。開発シェルは、`toolchain` ではなく個別のパッケージ(`sisho.sisho`・`sisho.twrit` など)を `combine` する。`toolchain` には古い `tomet` が入っていて、自前の `tomet` と同じ名前でぶつかるため。ロックは tomet 439 → 40、twrit 325 → 40、tomet-shelf 252 → 40。
-- 輪(sisho が tomet・twrit を固定し、tomet・twrit が sisho を取り込む)は、sisho の側で 3 つのツールの入力にある `sisho` を `inputs.sisho.follows = ""` で切って解いた。sisho のロックは 32 ノードのままで、`sisho` を含む枝はなく、各ツールは 1 つずつ。
+- ツールのリポジトリ自身(tomet・twrit・tomet-shelf)は、製品を自分のソースからビルドし続け、ほかの道具だけを sisho から取る。開発シェルは、`toolchain` ではなく個別のパッケージ(`sisho.sisho`・`sisho.twrit` など)を `combine` する。`toolchain` には古い `tomet` が入っていて、自前の `tomet` と同じ名前でぶつかるため。
+- 輪(sisho が tomet・twrit を固定し、tomet・twrit が sisho を取り込む)は、sisho の側で 3 つのツールの入力にある `sisho` を `inputs.sisho.follows = ""` で切って解いた。`sisho` を含む枝はなく、各ツールは 1 つずつ。
 - 3 つのツールのロックを、最新の sisho へ作り直す必要はなく、作り直しても落ち着く点がない(一方を進めると、もう一方の固定が古くなる)。各リポジトリは、固定している版の sisho を使う。
 - twrit の AGENTS.md にあった「tomet の flake が twrit を、twrit の flake が tomet を取り込む」という説明は、sisho 経由に書き直した。
 - `github:tomet-lang/tomet-writ`(twrit の旧名)を指していた入力は、この切り替えでなくなった。
-- (2026-10-20、利用者と決めた。)初期の TUI (`sisho tui`) を独立リポジトリ `sisho-desk` (`sisho desk`) へ切り出したことに伴い、`toolchain` に `sisho-desk` を加えた (`sisho`・`tomet`・`twrit`・`sisho-desk` の 4 つ)。初心者が `sisho desk` と叩いたときに別のパッケージの追加なしで届くようにするため。`sisho-desk` の flake 入力のうち開発用ツール (`tomet` と `twrit`) は、sisho の側で `inputs.tomet.follows = ""`・`inputs.twrit.follows = ""` として切る。nixpkgs・crane・fenix は自前のものを保ち、バイナリキャッシュを活かす。sisho の `flake.lock` は 32 ノードから 40 ノードになった (sisho-desk 自身のノードと開発用以外の入力分で +8)。
+- (2026-10-20、利用者と決めた。)初期の TUI (`sisho tui`) を独立リポジトリ `sisho-desk` (`sisho desk`) へ切り出したことに伴い、`toolchain` に `sisho-desk` を加えた (`sisho`・`tomet`・`twrit`・`sisho-desk` の 4 つ)。初心者が `sisho desk` と叩いたときに別のパッケージの追加なしで届くようにするため。`sisho-desk` の flake 入力のうち開発用ツール (`tomet` と `twrit`) は、sisho の側で `inputs.tomet.follows = ""`・`inputs.twrit.follows = ""` として切る。nixpkgs・crane・fenix は自前のものを保ち、バイナリキャッシュを活かす。
 
 ===[ catasto を足す ]
 
@@ -225,7 +223,7 @@ twrit の AGENTS.md と tomet の CLI のコードから見えた依存。
 - `fix` に `catasto sync` を足すか。足すなら、手で書き換えられた管理対象のファイルを元に戻すこと、キャッシュにないコミットのためにネットワークへ出ることを、`fix` の約束としてどう書くか。(2026-10-24)
 - `oneline` と `arbor-florifera` は、sisho への切り替えをしていない。同じひな形の書きかけで、`nix/default.nix` が定義されていない `tomet` を参照していて、今は評価できない(oneline は未コミット、arbor-florifera は git リポジトリではない)。書き終えたら、tomet-corpus と同じ変更を入れる。
 - 製品と開発環境を別の flake に分ける整理(各ツールの flake の入力を葉だけにする)。束ねには要らなかった。ツールの flake を sisho 以外から直接取り込む人が増え、開発用の入力が持ち込まれて困るようになったら、再考する。
-- 入力名を変えたツールがあれば、sisho の `flake.lock` の固定を進めて、ノード数を数え直す(切る指定は、固定している版がその入力名を持つときだけ効く)。
+- 入力名を変えたツールがあれば、sisho の `flake.lock` の固定を進める(切る指定は、固定している版がその入力名を持つときだけ効く)。
 - tandr は実装がまだない。`sisho check` / `sisho fix` に tandr を含める時期と、その中身は、tandr の CLI が決まってから。
 - tomet が二重に固定される。`Cargo.lock`(ライブラリとして取り込む tomet)と `flake.lock`(dev shell の `tomet` バイナリ)。ずれると、`sisho check` が呼ぶ `tomet` と、sisho 内蔵の `check-links` と `spec` が別の版の挙動になる。両者の一致を確かめる仕組みは、あとで考える。(2026-10-24: 変換と `serve` はバイナリを呼ぶ形になったので、ずれが効く面は `check-links` と `spec` に狭まった。)
 - tomet の内部 API の変更への追随。固定が先に進んでも sisho のビルドは壊れないが、固定を進めるたびに取り込み側を直す必要がある。(2026-10-24: 追随が要る crate は 5 つの vault の crate と `tomet-spec` に縮んだ。)
