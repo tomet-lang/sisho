@@ -561,11 +561,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1792810974,
-        "narHash": "sha256-Le4j9WC6c4pZgn41WXRzNnj+oHZXw4GBOv0MWkGNaqQ=",
+        "lastModified": 1792814531,
+        "narHash": "sha256-Z3svZKc/H3r2kBizMB36Zk/XBbtHKX1ZhEbYphdP9f0=",
         "owner": "tomet-lang",
         "repo": "tomet",
-        "rev": "5e2f48f8f00b84b83df1f9ae1be3e1cfeab55ba3",
+        "rev": "d8d480fedddc70627c6b71f21dc8527d244b9edf",
         "type": "github"
       },
       "original": {
