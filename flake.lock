@@ -656,6 +656,7 @@
     },
     "sisho-desk": {
       "inputs": {
+        "catasto": [],
         "crane": "crane_3",
         "fenix": "fenix_3",
         "flake-parts": "flake-parts_3",
@@ -665,11 +666,11 @@
         "twrit": []
       },
       "locked": {
-        "lastModified": 1792812294,
-        "narHash": "sha256-hEYdX45UAFMMTI4LPtwgTwyV896N9UtfREMFrYrZVOw=",
+        "lastModified": 1792822844,
+        "narHash": "sha256-QijwWx8EnnODKWgCbREnc6viIYUlS19fho8X144BnYM=",
         "owner": "tomet-lang",
         "repo": "sisho-desk",
-        "rev": "3ff0525678106824d2023ff9ecf3a89ee467ed75",
+        "rev": "79a2025db3506be41722f5a92313ad05acfb34d7",
         "type": "github"
       },
       "original": {

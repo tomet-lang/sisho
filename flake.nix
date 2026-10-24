@@ -51,6 +51,7 @@
       url = "github:tomet-lang/sisho-desk";
       inputs.tomet.follows = "";
       inputs.twrit.follows = "";
+      inputs.catasto.follows = "";
     };
     catasto = {
       url = "github:tomet-lang/fs-catasto";
