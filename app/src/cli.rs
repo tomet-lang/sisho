@@ -68,15 +68,21 @@ pub enum Command {
     /// or next to the source with `--in-place`. A directory is converted into
     /// files, so it needs `--out`, `--in-place` or `--dry-run`.
     ///
+    /// `tomet` does the converting: this is `tomet to-md`, `html`, `to-typst`,
+    /// `to-pandoc`, `from-md` or `from-pandoc`, picked by the format, and what
+    /// it prints and the code it exits with are `sisho`'s. `sisho` names the
+    /// formats and turns away what means nothing before `tomet` is started
+    /// (needs `tomet` 0.4.0 or newer).
+    ///
     /// Nothing is read from a document's own `@config`: that is `sisho
     /// export`. This is the conversion you ask for by name.
     Convert(ConvertArgs),
     /// Serve a document as HTML over HTTP on 127.0.0.1, rendering it again on
     /// every request: edit the file and reload the page.
     ///
-    /// It is the rendering of `sisho convert --to html`. A document that
-    /// cannot be rendered is shown as an error page with status 500, so the
-    /// browser tells you what is wrong. Stop it with Ctrl+C.
+    /// Each request runs `tomet html`, as `sisho convert --to html` does. A
+    /// document that cannot be rendered is shown as an error page with status
+    /// 500, so the browser tells you what is wrong. Stop it with Ctrl+C.
     Serve(ServeArgs),
     /// Generate the CLI reference specification in `.tmt` format from the
     /// clap definitions.

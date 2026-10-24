@@ -32,10 +32,13 @@ impl Tool {
     ///
     /// Both gave `--version` its meaning at 0.2.0, so a tool that cannot
     /// report a version is older than this. When `sisho` comes to rely on
-    /// something a later version added, this is where that is said.
+    /// something a later version added, this is where that is said: `tomet`
+    /// 0.4.0 is the first whose conversion commands take a directory, `-` and
+    /// `--dry-run` alike, which `sisho convert` leaves to them.
     pub const fn min_version(self) -> Version {
         match self {
-            Tool::Tomet | Tool::Twrit => Version::new(0, 2, 0),
+            Tool::Tomet => Version::new(0, 4, 0),
+            Tool::Twrit => Version::new(0, 2, 0),
         }
     }
 

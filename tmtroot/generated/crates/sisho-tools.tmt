@@ -1,6 +1,6 @@
 ::kind(api)
 
-::meta{crate: sisho-tools, dependencies: list(sisho-run), dependents: list(sisho-cli, sisho-counter)}
+::meta{crate: sisho-tools, dependencies: list(sisho-run), dependents: list(sisho-cli, sisho-counter, sisho-serve)}
 
 =[sisho-tools]
 
@@ -20,3 +20,7 @@ whether there is anything for it to look at, and says so when there is not
 
 Only the steps that run a tool are here. If `sisho` does a step itself
 one day, in-process, the program puts it in the plan beside these.
+
+`sisho convert` and `sisho serve` are not in a plan but are calls of the
+same kind: a [`Conversion`] says which `tomet` command converts which way,
+and `tomet` does the converting.

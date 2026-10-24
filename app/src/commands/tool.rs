@@ -21,15 +21,8 @@ pub fn tool(words: &[OsString]) -> Result<ExitCode> {
 
     let word = name.to_str();
     if let Some(program) = word.and_then(program) {
-        let status = Step::new(program.word(), program.program())
-            .args(args)
-            .run_inherited();
-        if let Status::NotFound = status {
-            eprintln!("sisho: {} is not on PATH", program.program());
-        } else if let Status::CouldNotStart { reason } = &status {
-            eprintln!("sisho: could not start {}: {reason}", program.program());
-        }
-        return Ok(ExitCode::from(passthrough_code(&status)));
+        let step = Step::new(program.word(), program.program()).args(args);
+        return Ok(run_inherited(&step, program.program()));
     }
 
     if let Some(word) = word.filter(|w| is_valid_word(w)) {
@@ -54,6 +47,19 @@ pub fn tool(words: &[OsString]) -> Result<ExitCode> {
         tool_names()
     );
     Ok(ExitCode::from(USAGE_ERROR))
+}
+
+/// Run `step` with standard input, output and error handed to the program as
+/// they are, and take on its exit code (see [`passthrough_code`]). Says so on
+/// standard error when `program` is not on `PATH` or cannot be started.
+pub fn run_inherited(step: &Step, program: &str) -> ExitCode {
+    let status = step.run_inherited();
+    if let Status::NotFound = status {
+        eprintln!("sisho: {program} is not on PATH");
+    } else if let Status::CouldNotStart { reason } = &status {
+        eprintln!("sisho: could not start {program}: {reason}");
+    }
+    ExitCode::from(passthrough_code(&status))
 }
 
 /// The words that run a program, for messages.

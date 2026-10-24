@@ -30,7 +30,7 @@ sisho                # interactive counter dashboard (when run on a terminal wit
 sisho check [path]   # verify without writing; steps run at the same time
 sisho fix [path]     # regenerate, export, format; steps run one after another
 sisho check-links [path]   # find links that point at nothing (cached, outside the vault)
-sisho convert <path|-> --to F | --from F   # one document, standard input or a directory, to or from Tomet
+sisho convert <path|-> --to F | --from F   # one document, standard input or a directory, to or from Tomet (tomet converts)
 sisho serve <file>         # a document as HTML over HTTP on 127.0.0.1, rendered again per request
 sisho desk [path]          # interactive desk (extension): migrate Markdown, edit metadata, search structure
 sisho --list [--all]       # list installed extensions found on PATH (-l)
@@ -86,8 +86,8 @@ Each tool is built as its own flake builds it, so the binary cache of `tomet` se
 
 -| @dir(app) (`sisho-cli`) -- Main CLI binary (`sisho`). Layer 2.
 -| @dir(crates/sisho-tools) (`sisho-tools`) -- What `sisho` knows about `tomet`, `twrit` and `tandr`. Layer 1.
--| @dir(crates/sisho-vault) (`sisho-vault`) -- Vault and workspace commands moved out of `tomet`, and conversions. Layer 1.
--| @dir(crates/sisho-serve) (`sisho-serve`) -- `serve`, kept apart so the HTTP stack stays out of other builds. Layer 1.
+-| @dir(crates/sisho-vault) (`sisho-vault`) -- The vault commands `sisho` does itself: `check-links`. Layer 1.
+-| @dir(crates/sisho-serve) (`sisho-serve`) -- `serve` (it runs `tomet html` for each request), kept apart so the HTTP stack stays out of other builds. Layer 1.
 -| @dir(crates/sisho-counter) (`sisho-counter`) -- Interactive counter dashboard, kept apart so the TUI stack stays out of the core CLI. Layer 1.
 -| @dir(crates/sisho-run) (`sisho-run`) -- Runs external commands and collects outcomes. The only crate that starts a process. Layer 0.
 

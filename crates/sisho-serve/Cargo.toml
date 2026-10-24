@@ -7,7 +7,8 @@ description = "Serve a .tmt document over HTTP for sisho."
 publish = false
 
 [dependencies]
-sisho-vault = { workspace = true }
+sisho-run = { workspace = true }
+sisho-tools = { workspace = true }
 
 #= Crates.io
 anyhow = { workspace = true }

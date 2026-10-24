@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::{SHELF, Tool, check_steps, fix_steps, program};
+use crate::{Conversion, Direction, SHELF, Source, Target, Tool, check_steps, fix_steps, program};
 
 fn lines(steps: &[sisho_run::Step]) -> Vec<String> {
     steps.iter().map(|s| s.command_line()).collect()
@@ -204,7 +204,96 @@ mod versions {
         for tool in Tool::ALL {
             assert!(tool.min_version() >= v(0, 2, 0), "{}", tool.name());
         }
-        assert!(Tool::Tomet.judge(Some("tomet 0.2.0")).is_fine());
+        assert!(Tool::Twrit.judge(Some("twrit 0.2.0")).is_fine());
         assert!(!Tool::Twrit.judge(Some("twrit 0.1.0")).is_fine());
+    }
+
+    /// `sisho convert` leaves directories, `-` and `--dry-run` to `tomet`,
+    /// which does all of that for every conversion from 0.4.0 on.
+    #[test]
+    fn tomet_needs_the_version_whose_conversions_take_every_input() {
+        assert_eq!(Tool::Tomet.min_version(), v(0, 4, 0));
+        assert!(Tool::Tomet.judge(Some("tomet 0.4.0")).is_fine());
+        assert!(!Tool::Tomet.judge(Some("tomet 0.3.0")).is_fine());
+    }
+}
+
+mod conversions {
+    use std::path::Path;
+
+    use super::*;
+
+    fn line(conversion: &Conversion<'_>) -> String {
+        conversion.step().command_line()
+    }
+
+    #[test]
+    fn each_way_is_the_tomet_command_that_converts_that_way() {
+        let path = Path::new("doc");
+        for (direction, command) in [
+            (Direction::To(Target::CommonMark), "to-md"),
+            (Direction::To(Target::Html), "html"),
+            (Direction::To(Target::Typst), "to-typst"),
+            (Direction::To(Target::Pandoc), "to-pandoc"),
+            (Direction::From(Source::CommonMark), "from-md"),
+            (Direction::From(Source::Pandoc), "from-pandoc"),
+        ] {
+            let conversion = Conversion::new(path, direction);
+            assert_eq!(line(&conversion), format!("tomet {command} doc"));
+            assert_eq!(conversion.step().name(), format!("tomet {command}"));
+        }
+    }
+
+    #[test]
+    fn where_the_result_goes_is_passed_on() {
+        let out = Path::new("out");
+        let mut conversion = Conversion::new(Path::new("src"), Direction::From(Source::CommonMark));
+        conversion.out = Some(out);
+        conversion.remove_original = true;
+        assert_eq!(
+            line(&conversion),
+            "tomet from-md --out out --remove-original src"
+        );
+
+        let mut conversion = Conversion::new(Path::new("src"), Direction::To(Target::Typst));
+        conversion.in_place = true;
+        conversion.dry_run = true;
+        assert_eq!(line(&conversion), "tomet to-typst --in-place --dry-run src");
+    }
+
+    #[test]
+    fn the_html_options_are_passed_on() {
+        let mut conversion = Conversion::new(Path::new("doc.tmt"), Direction::To(Target::Html));
+        conversion.advanced = true;
+        conversion.lang = Some("en");
+        conversion.body = true;
+        assert_eq!(
+            line(&conversion),
+            "tomet html --advanced --body --lang en doc.tmt"
+        );
+    }
+
+    #[test]
+    fn standard_input_is_a_path_as_it_is() {
+        let conversion = Conversion::new(Path::new("-"), Direction::From(Source::Pandoc));
+        assert_eq!(line(&conversion), "tomet from-pandoc -");
+    }
+
+    /// A file called `-x.tmt` is a file, not an option of `tomet`.
+    #[test]
+    fn a_path_that_starts_with_a_dash_is_not_taken_for_an_option() {
+        let conversion = Conversion::new(Path::new("-x.tmt"), Direction::To(Target::Html));
+        assert_eq!(line(&conversion), "tomet html -- -x.tmt");
+    }
+
+    #[test]
+    fn the_formats_are_found_by_name_in_any_case_with_their_aliases() {
+        assert_eq!(Target::parse("MD"), Some(Target::CommonMark));
+        assert_eq!(Target::parse("commonmark"), Some(Target::CommonMark));
+        assert_eq!(Target::parse("Typst"), Some(Target::Typst));
+        assert_eq!(Target::parse("docx"), None);
+        assert_eq!(Source::parse("md"), Some(Source::CommonMark));
+        assert_eq!(Source::parse("PANDOC"), Some(Source::Pandoc));
+        assert_eq!(Source::parse("html"), None);
     }
 }

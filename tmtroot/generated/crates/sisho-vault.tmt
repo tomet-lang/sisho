@@ -1,101 +1,28 @@
 ::kind(api)
 
-::meta{crate: sisho-vault, dependencies: list(), dependents: list(sisho-cli, sisho-counter, sisho-serve)}
+::meta{crate: sisho-vault, dependencies: list(), dependents: list(sisho-cli, sisho-counter)}
 
 =[sisho-vault]
 
 Layer 1: the vault commands that `sisho` does itself.
 
-`check-links` and `convert`. Unlike `sisho-tools`, these use the `tomet`
-crates directly, through git dependencies: `sisho` is the part of the
-ecosystem that knows what a vault is, as `cargo` knows what a workspace is.
+`check-links`. Unlike `sisho-tools`, this uses the `tomet` crates
+directly, through git dependencies: `sisho` is the part of the ecosystem
+that knows what a vault is, as `cargo` knows what a workspace is. It
+follows a vault's sweeps and caches, which a document alone does not
+decide.
 
 What belongs to the language stays in `tomet`, where its rules live: `new`
 (it uses the expression evaluator), `refactor` (the migration rules change
-with the language) and `export` (it follows the `@config(export: ...)` a
-document declares for itself). `sisho tomet new ...` reaches them.
+with the language), `export` (it follows the `@config(export: ...)` a
+document declares for itself) and the conversions (a document alone decides
+them; `sisho convert` asks `tomet` for them). `sisho tomet new ...` reaches
+the commands that are not `sisho`'s.
 
 Each command is a module that does the work and returns what happened as
 data. Printing is the program's: this crate writes nothing to the terminal,
 so the same work can be shown as text or as JSON. The `tomet` types stay
 inside; the program does not depend on `tomet` crates.
-
-==[Module convert]
-
-`sisho convert`: change a document, or a directory of them, from one format
-to another.
-
-One verb with two directions. [`Direction::To`] reads Tomet and writes
-CommonMark, HTML, Typst or Pandoc's JSON AST; [`Direction::From`] reads
-CommonMark or Pandoc's JSON AST and writes Tomet. Whatever the direction,
-the input is a file, standard input (`-`), or a directory, and the output
-goes to standard output, to `--out`, or next to the source (`--in-place`).
-
-Nothing here is declared by a document. `export` is the one that follows a
-document's own `@config(export: ...)`; this is the explicit one, for a
-conversion you ask for by name.
-
-The text of a conversion is exactly what is written to a file: no newline
-is added when it goes to standard output, so the two never differ.
-
-===[Structs]
-
-====[struct Plan]
-
-Where the result goes, and what else to do about it.
-
-====[struct Item]
-
-What converting one file of a directory came to.
-
-====[struct Tree]
-
-Every file of a directory that was looked at.
-
-===[Enums]
-
-====[enum Target]
-
-A format Tomet can be written as.
-
-====[enum Source]
-
-A format that can be read as Tomet.
-
-====[enum Direction]
-
-Which way a conversion goes.
-
-====[enum Converted]
-
-What converting one file came to.
-
-===[Functions]
-
-====[fn convert_text]
-
-Convert the text `src` of the file `path` (`-` for standard input).
-
-This is the conversion itself, with no destination in it.
-
-====[fn convert_file]
-
-Convert one file, or standard input (`-`), and put the result where `plan`
-says.
-
-====[fn convert_tree]
-
-Convert every file under `dir` that is in the format being converted from:
-the Markdown files for [`Direction::From`]`(`[`Source::CommonMark`]`)`, the
-Tomet documents for [`Direction::To`].
-
-A directory is converted into files, so the plan has to name where they
-go. One file that fails does not stop the others; it is an [`Item`] with an
-error.
-
-====[fn is_stdin]
-
-Whether a path means standard input rather than a file on disk.
 
 ==[Module diagnostic]
 
@@ -151,47 +78,3 @@ what was learned in the cache at `cache_path`.
 
 `Err` means the check itself could not run; a broken link is not an error,
 it is in the [`Report`].
-
-==[Module render]
-
-A parsed document, written out in each of the formats `tomet` can produce.
-
-Every function that renders takes a document whose `${...}` expressions
-have already been resolved (see [`prepared`]), so none of the converters
-needs to know expressions exist.
-
-===[Structs]
-
-====[struct Html]
-
-How HTML is written.
-
-===[Functions]
-
-====[fn prepared]
-
-Parse `src`, the text of the document `path`, in `vault`, and resolve its
-`${...}` expressions.
-
-The vault settles what a `${macro.…}` or a `${self.…}` means, so every
-command that renders a document agrees about it. A parse error comes back
-shown with its line and a pointer at the column.
-
-====[fn meta_title]
-
-The `title` string of the document's `@meta` block, if it has one. An
-HTML page prefers it to the file name.
-
-====[fn commonmark]
-
-====[fn typst]
-
-====[fn pandoc_json]
-
-Pandoc's AST as JSON, not a rendering: `pandoc -f json` turns it into
-whatever format is actually wanted.
-
-====[fn html]
-
-HTML: a standalone page, or the body alone. A page is titled with the
-document's `@meta` title, or `fallback_title` (the file name) without one.

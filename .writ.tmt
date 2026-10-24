@@ -63,8 +63,10 @@ external crate except what is in the allowlist: `jobserver` and what it brings
 in (`libc`, `getrandom`, `cfg-if`, `r-efi`). None of it is a `tomet-*` crate;
 a `jobserver` update may change the list.
 
-Only what `sisho` implements itself -- `sisho-vault`, `sisho-serve` --
-uses the `tomet` crates, through git dependencies.
+Only what `sisho` implements itself -- `sisho-vault` (`check-links`) and
+`sisho spec` in `app` -- uses the `tomet` crates, through git dependencies.
+Conversion is not among them: `sisho convert` and `sisho-serve` call the
+`tomet` binary.
 
 ---[ Why ]---
 

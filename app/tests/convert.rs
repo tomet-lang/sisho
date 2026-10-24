@@ -1,293 +1,170 @@
-//! `sisho convert` over documents the test writes into a temporary directory.
+//! `sisho convert`, against a fake `tomet`: which command it runs, with what.
+//!
+//! The converting is `tomet`'s and is tested there. What `sisho` owns is the
+//! verb: naming the formats, refusing what means nothing, handing the terminal
+//! over, and taking on the exit code.
+#![cfg(unix)]
+
+mod common;
 
 use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
-use std::process::{Command, Output, Stdio};
+use std::os::unix::fs::PermissionsExt;
+use std::process::{Command, Stdio};
 
-struct Dir(PathBuf);
+use common::{Sandbox, code, stderr, stdout};
 
-impl Dir {
-    fn new(name: &str) -> Self {
-        let dir =
-            std::env::temp_dir().join(format!("sisho-app-convert-{}-{name}", std::process::id()));
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).unwrap();
-        Self(dir)
-    }
-
-    fn write(&self, rel: &str, text: &str) {
-        let path = self.0.join(rel);
-        fs::create_dir_all(path.parent().unwrap()).unwrap();
-        fs::write(path, text).unwrap();
-    }
-
-    fn read(&self, rel: &str) -> String {
-        fs::read_to_string(self.0.join(rel)).unwrap()
-    }
-
-    fn command(&self, args: &[&str]) -> Command {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_sisho"));
-        command.arg("convert").args(args).current_dir(&self.0);
-        command
-    }
-
-    fn sisho(&self, args: &[&str]) -> Output {
-        self.command(args).output().unwrap()
-    }
-
-    /// Run with `input` on standard input.
-    fn sisho_with_input(&self, args: &[&str], input: &str) -> Output {
-        let mut child = self
-            .command(args)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .unwrap();
-        child
-            .stdin
-            .take()
-            .unwrap()
-            .write_all(input.as_bytes())
-            .unwrap();
-        child.wait_with_output().unwrap()
-    }
-}
-
-impl Drop for Dir {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.0);
-    }
-}
-
-fn stdout(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stdout).into_owned()
-}
-
-fn stderr(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stderr).into_owned()
-}
-
-fn code(output: &Output) -> i32 {
-    output.status.code().unwrap()
-}
-
-const TMT: &str = "=[ Hello Convert ]\n\nA paragraph.\n";
-const MD: &str = "# Hello Convert\n\nA paragraph.\n";
-
-fn dir_with_documents(name: &str) -> Dir {
-    let dir = Dir::new(name);
-    dir.write("doc.tmt", TMT);
-    dir.write("note.md", MD);
-    dir
+/// Replace the fake `tomet` with a script of the test's own.
+fn tomet_script(sandbox: &Sandbox, body: &str) {
+    let path = sandbox.dir.join("tomet");
+    fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
 }
 
 #[test]
-fn a_document_is_written_to_standard_output_as_exactly_the_file_would_be() {
-    let dir = dir_with_documents("same-bytes");
-
-    let printed = dir.sisho(&["doc.tmt", "--to", "md"]);
-    assert_eq!(code(&printed), 0, "{}", stderr(&printed));
-    let text = stdout(&printed);
-    assert!(text.contains("# Hello Convert"), "{text}");
-
-    let written = dir.sisho(&["doc.tmt", "--to", "md", "-o", "doc.md"]);
-    assert_eq!(code(&written), 0);
-    assert_eq!(
-        dir.read("doc.md"),
-        text,
-        "no newline is added on the way to the terminal"
-    );
-    assert!(
-        stdout(&written).starts_with("Converted doc.tmt -> doc.md"),
-        "{}",
-        stdout(&written)
-    );
-}
-
-#[test]
-fn every_target_is_available() {
-    let dir = dir_with_documents("targets");
-    for (name, needle) in [
-        ("commonmark", "# Hello Convert"),
-        ("md", "# Hello Convert"),
-        ("html", "<html"),
-        ("typst", "Hello Convert"),
-        ("pandoc", "pandoc-api-version"),
+fn each_target_is_the_tomet_command_that_converts_to_it() {
+    let sandbox = Sandbox::new("convert-targets").tool("tomet");
+    for (format, command) in [
+        ("md", "to-md"),
+        ("commonmark", "to-md"),
+        ("MD", "to-md"),
+        ("html", "html"),
+        ("typst", "to-typst"),
+        ("pandoc", "to-pandoc"),
     ] {
-        let output = dir.sisho(&["doc.tmt", "--to", name]);
-        assert_eq!(code(&output), 0, "--to {name}: {}", stderr(&output));
-        assert!(
-            stdout(&output).contains(needle),
-            "--to {name}: {}",
-            stdout(&output)
-        );
+        let output = sandbox.sisho(&["convert", "doc.tmt", "--to", format], "");
+        assert_eq!(code(&output), 0, "{format}: {}", stderr(&output));
+        assert_eq!(stdout(&output), format!("args: {command} doc.tmt\n"));
+    }
+}
+
+#[test]
+fn each_source_is_the_tomet_command_that_converts_from_it() {
+    let sandbox = Sandbox::new("convert-sources").tool("tomet");
+    for (format, command) in [
+        ("md", "from-md"),
+        ("commonmark", "from-md"),
+        ("pandoc", "from-pandoc"),
+    ] {
+        let output = sandbox.sisho(&["convert", "in", "--from", format], "");
+        assert_eq!(code(&output), 0, "{format}: {}", stderr(&output));
+        assert_eq!(stdout(&output), format!("args: {command} in\n"));
+    }
+}
+
+#[test]
+fn where_the_result_goes_is_left_to_tomet() {
+    let sandbox = Sandbox::new("convert-destination").tool("tomet");
+    let cases: &[(&[&str], &str)] = &[
+        (
+            &["doc.tmt", "--to", "md", "-o", "out"],
+            "to-md --out out doc.tmt",
+        ),
+        (
+            &["src", "--to", "typst", "--in-place", "--dry-run"],
+            "to-typst --in-place --dry-run src",
+        ),
+        (
+            &["src", "--from", "md", "-i", "--remove-original"],
+            "from-md --in-place --remove-original src",
+        ),
+        (
+            &["src", "--from", "md", "--out", "o", "--remove-original"],
+            "from-md --out o --remove-original src",
+        ),
+    ];
+    for (args, expected) in cases {
+        let mut full = vec!["convert"];
+        full.extend_from_slice(args);
+        let output = sandbox.sisho(&full, "");
+        assert_eq!(code(&output), 0, "{args:?}: {}", stderr(&output));
+        assert_eq!(stdout(&output), format!("args: {expected}\n"), "{args:?}");
     }
 }
 
 #[test]
 fn html_takes_its_options() {
-    let dir = dir_with_documents("html");
-
-    let page = stdout(&dir.sisho(&["doc.tmt", "--to", "html", "--lang", "en"]));
-    assert!(page.contains("lang=\"en\""), "{page}");
-
-    let body = stdout(&dir.sisho(&["doc.tmt", "--to", "html", "--body"]));
-    assert!(!body.contains("<html"), "{body}");
-    assert!(body.contains("Hello Convert"), "{body}");
-}
-
-#[test]
-fn the_pandoc_bridge_works_through_standard_input_and_output() {
-    let dir = dir_with_documents("bridge");
-
-    let json = stdout(&dir.sisho(&["doc.tmt", "--to", "pandoc"]));
-    let back = dir.sisho_with_input(&["-", "--from", "pandoc"], &json);
-
-    assert_eq!(code(&back), 0, "{}", stderr(&back));
-    assert!(stdout(&back).contains("Hello Convert"), "{}", stdout(&back));
-    assert!(stdout(&back).contains("A paragraph."), "{}", stdout(&back));
-}
-
-#[test]
-fn markdown_can_be_read_from_standard_input_too() {
-    let dir = Dir::new("stdin-md");
-    let output = dir.sisho_with_input(&["-", "--from", "md"], MD);
-
-    assert_eq!(code(&output), 0, "{}", stderr(&output));
-    assert!(
-        stdout(&output).contains("Hello Convert"),
-        "{}",
-        stdout(&output)
+    let sandbox = Sandbox::new("convert-html").tool("tomet");
+    let output = sandbox.sisho(
+        &[
+            "convert",
+            "doc.tmt",
+            "--to",
+            "html",
+            "--advanced",
+            "--lang",
+            "en",
+            "--body",
+        ],
+        "",
     );
-}
-
-#[test]
-fn markdown_becomes_tomet_in_place_and_the_original_can_be_removed() {
-    let dir = dir_with_documents("migrate");
-
-    let kept = dir.sisho(&["note.md", "--from", "md", "--in-place"]);
-    assert_eq!(code(&kept), 0, "{}", stderr(&kept));
-    assert!(dir.0.join("note.tmt").is_file());
-    assert!(
-        dir.0.join("note.md").exists(),
-        "the original stays by default"
-    );
-
-    let moved = dir.sisho(&["note.md", "--from", "md", "--in-place", "--remove-original"]);
-    assert_eq!(code(&moved), 0);
-    assert!(!dir.0.join("note.md").exists());
-}
-
-#[test]
-fn a_dry_run_checks_and_writes_nothing() {
-    let dir = dir_with_documents("dry");
-    let output = dir.sisho(&["note.md", "--from", "md", "--dry-run"]);
-
-    assert_eq!(code(&output), 0);
-    assert_eq!(stdout(&output), "OK (dry-run): note.md\n");
-    assert!(!dir.0.join("note.tmt").exists());
-}
-
-#[test]
-fn a_directory_is_converted_into_files_and_summarised() {
-    let dir = Dir::new("tree");
-    dir.write("md/one.md", MD);
-    dir.write("md/sub/two.md", MD);
-
-    let output = dir.sisho(&["md", "--from", "md", "--out", "out"]);
-    assert_eq!(code(&output), 0, "{}", stderr(&output));
     assert_eq!(
         stdout(&output),
-        "Conversion finished: 2 total, 2 succeeded, 0 failed\n"
+        "args: html --advanced --body --lang en doc.tmt\n"
     );
-    assert!(dir.0.join("out/one.tmt").is_file());
-    assert!(dir.0.join("out/sub/two.tmt").is_file());
 }
 
 #[test]
-fn a_directory_of_tomet_is_converted_to_a_format_too() {
-    let dir = Dir::new("tree-to");
-    dir.write("docs/a.tmt", TMT);
-    dir.write("docs/sub/b.tmt", TMT);
+fn a_file_that_starts_with_a_dash_is_a_file() {
+    let sandbox = Sandbox::new("convert-dash").tool("tomet");
+    let output = sandbox.sisho(&["convert", "--to", "md", "--", "-x.tmt"], "");
+    assert_eq!(stdout(&output), "args: to-md -- -x.tmt\n");
+}
 
-    let output = dir.sisho(&["docs", "--to", "html", "--out", "site"]);
-    assert_eq!(code(&output), 0, "{}", stderr(&output));
-    assert!(dir.0.join("site/a.html").is_file());
-    assert!(dir.0.join("site/sub/b.html").is_file());
+/// `pandoc -t json x.docx | sisho convert - --from pandoc | ...`: the pipes are
+/// `tomet`'s own, not read and written again by `sisho`.
+#[test]
+fn standard_input_and_output_are_tomets_own() {
+    let sandbox = Sandbox::new("convert-stdin");
+    tomet_script(&sandbox, "read line; echo \"$1 read: $line\"");
+    let mut child = Command::new(env!("CARGO_BIN_EXE_sisho"))
+        .args(["convert", "-", "--from", "pandoc"])
+        .env_clear()
+        .env("PATH", &sandbox.dir)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child.stdin.take().unwrap().write_all(b"hello\n").unwrap();
+    let output = child.wait_with_output().unwrap();
+
+    assert_eq!(code(&output), 0);
+    assert_eq!(stdout(&output), "from-pandoc read: hello\n");
 }
 
 #[test]
-fn a_directory_needs_somewhere_to_go() {
-    let dir = Dir::new("tree-nowhere");
-    dir.write("md/one.md", MD);
-
-    let output = dir.sisho(&["md", "--from", "md"]);
+fn what_tomet_says_and_the_code_it_exits_with_are_sishos() {
+    let sandbox = Sandbox::new("convert-failure").tool("tomet");
+    let output = sandbox.sisho(&["convert", "doc.tmt", "--to", "md"], "tomet:to-md");
     assert_eq!(code(&output), 1);
     assert!(
-        stderr(&output).contains("pass --out <DIR> or --in-place"),
+        stderr(&output).contains("boom from tomet to-md doc.tmt"),
         "{}",
         stderr(&output)
     );
+
+    tomet_script(&sandbox, "exit 3");
+    let output = sandbox.sisho(&["convert", "doc.tmt", "--to", "md"], "");
+    assert_eq!(code(&output), 3);
 }
 
 #[test]
-fn one_file_that_fails_fails_the_run_and_the_others_are_still_converted() {
-    let dir = Dir::new("tree-failure");
-    dir.write("docs/good.tmt", TMT);
-    dir.write("docs/broken.tmt", "=[ unterminated\n");
-
-    let output = dir.sisho(&["docs", "--to", "md", "--out", "out"]);
-    assert_eq!(code(&output), 1);
+fn a_tomet_that_is_not_installed_is_said_so() {
+    let sandbox = Sandbox::new("convert-no-tomet");
+    let output = sandbox.sisho(&["convert", "doc.tmt", "--to", "md"], "");
+    assert_eq!(code(&output), 127);
     assert!(
-        stdout(&output).contains("2 total, 1 succeeded, 1 failed"),
-        "{}",
-        stdout(&output)
-    );
-    assert!(
-        stderr(&output).contains("Errors encountered (1):"),
-        "{}",
-        stderr(&output)
-    );
-    assert!(
-        stderr(&output).contains("sisho: 1 file(s) failed conversion"),
-        "{}",
-        stderr(&output)
-    );
-    assert!(dir.0.join("out/good.md").is_file());
-}
-
-#[test]
-fn a_path_that_does_not_exist_is_named() {
-    let dir = Dir::new("absent");
-    let output = dir.sisho(&["nope.tmt", "--to", "md"]);
-
-    assert_eq!(code(&output), 1);
-    assert!(
-        stderr(&output).contains("sisho: path 'nope.tmt' does not exist"),
+        stderr(&output).contains("tomet is not on PATH"),
         "{}",
         stderr(&output)
     );
 }
 
-#[test]
-fn a_parse_error_names_the_line_and_column() {
-    let dir = Dir::new("parse-error");
-    dir.write("broken.tmt", "=[ unterminated\n");
-    let output = dir.sisho(&["broken.tmt", "--to", "md"]);
-
-    assert_eq!(code(&output), 1);
-    assert!(
-        stderr(&output).contains("--> broken.tmt:"),
-        "{}",
-        stderr(&output)
-    );
-}
-
+/// Refused before `tomet` is started: with no `tomet` on `PATH`, a command that
+/// had been started would exit 127.
 #[test]
 fn a_command_line_that_means_nothing_is_a_usage_error() {
-    let dir = dir_with_documents("usage");
+    let sandbox = Sandbox::new("convert-usage");
     let cases: &[&[&str]] = &[
         &["doc.tmt"],                                          // neither --to nor --from
         &["doc.tmt", "--to", "md", "--from", "md"],            // both
@@ -300,17 +177,17 @@ fn a_command_line_that_means_nothing_is_a_usage_error() {
         &["note.md", "--from", "md", "-i", "-o", "x.tmt"],     // two destinations
     ];
     for args in cases {
-        let output = dir.sisho(args);
+        let mut full = vec!["convert"];
+        full.extend_from_slice(args);
+        let output = sandbox.sisho(&full, "");
         assert_eq!(code(&output), 2, "{args:?}: {}", stderr(&output));
     }
-    assert!(dir.0.join("note.md").exists());
-    assert!(dir.read("doc.tmt") == TMT);
 }
 
 #[test]
 fn the_unknown_format_message_lists_the_known_ones() {
-    let dir = dir_with_documents("unknown-format");
-    let output = dir.sisho(&["doc.tmt", "--to", "docx"]);
+    let sandbox = Sandbox::new("convert-unknown-format");
+    let output = sandbox.sisho(&["convert", "doc.tmt", "--to", "docx"], "");
 
     assert!(
         stderr(&output).contains("unknown format 'docx' for --to"),
@@ -319,19 +196,6 @@ fn the_unknown_format_message_lists_the_known_ones() {
     );
     assert!(
         stderr(&output).contains("commonmark (md), html, typst, pandoc"),
-        "{}",
-        stderr(&output)
-    );
-}
-
-#[test]
-fn standard_input_cannot_be_converted_in_place() {
-    let dir = Dir::new("stdin-in-place");
-    let output = dir.sisho_with_input(&["-", "--from", "md", "-i"], MD);
-
-    assert_eq!(code(&output), 1);
-    assert!(
-        stderr(&output).contains("standard input is not a file"),
         "{}",
         stderr(&output)
     );

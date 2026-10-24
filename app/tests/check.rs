@@ -123,7 +123,7 @@ fn a_tool_older_than_sisho_works_with_is_a_failed_step_first_in_the_report() {
     assert_eq!(code(&output), 1, "{text}");
     assert!(text.contains("✗ tomet version"), "{text}");
     assert!(
-        text.contains("tomet 0.1.0 is older than sisho needs (0.2.0 or newer): update tomet"),
+        text.contains("tomet 0.1.0 is older than sisho needs (0.4.0 or newer): update tomet"),
         "{text}"
     );
     // First in the report, and the tool's own steps still ran: they only read.
@@ -153,7 +153,7 @@ fn a_tool_that_cannot_report_a_version_is_older_than_any_minimum() {
 #[test]
 fn a_tool_exactly_at_the_minimum_or_above_it_is_fine() {
     let sandbox = Sandbox::new("new-enough").both_tools();
-    for version in ["0.2.0", "0.2.1", "0.10.0", "1.0.0"] {
+    for version in ["0.4.0", "0.4.1", "0.10.0", "1.0.0"] {
         let output = sandbox.sisho_with(&["check"], "", &[("FAKE_VERSION_TOMET", version)]);
         assert_eq!(code(&output), 0, "{version}: {}", stdout(&output));
     }
@@ -173,7 +173,9 @@ fn json_says_what_each_tool_needs_and_lists_a_version_problem_as_a_step() {
     let output = sandbox.sisho_with(&["check", "--json"], "", &[("FAKE_VERSION_TWRIT", "0.1.5")]);
     let json: Value = serde_json::from_slice(&output.stdout).unwrap();
 
-    assert_eq!(json["tools"][0]["needs"], "0.2.0");
+    // Each tool has a minimum of its own: tomet's moved with its conversions.
+    assert_eq!(json["tools"][0]["needs"], "0.4.0");
+    assert_eq!(json["tools"][1]["needs"], "0.2.0");
     assert_eq!(json["tools"][1]["version"], "twrit 0.1.5");
     assert_eq!(json["ok"], false);
     assert_eq!(json["steps"][0]["name"], "twrit version");

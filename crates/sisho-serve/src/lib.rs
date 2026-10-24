@@ -1,8 +1,9 @@
 //! Layer 1: `sisho serve`.
 //!
 //! One document, as HTML, over HTTP on 127.0.0.1, rendered again on every
-//! request: edit the file and reload the page. It is the same rendering as
-//! `sisho convert --to html`, so what you see is what that writes.
+//! request: edit the file and reload the page. The rendering is `tomet html`,
+//! run for each request, so what you see is what `sisho convert --to html`
+//! writes.
 //!
 //! Kept in its own crate so that the HTTP stack (axum, tokio) stays out of
 //! the build of every other command.
@@ -12,14 +13,14 @@ use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use axum::Router;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::Html;
 use axum::routing::get;
-use sisho_vault::convert::{self, Converted, Direction, Plan, Target};
-use sisho_vault::render;
+use sisho_run::{Outcome, Status};
+use sisho_tools::{Conversion, Direction, Target};
 
 /// What to serve, and how to render it.
 #[derive(Debug, Clone)]
@@ -33,20 +34,30 @@ pub struct Options {
 }
 
 /// The document as HTML, as it is on disk now.
+///
+/// `Err` says why it could not be shown, in `tomet`'s own words.
 pub fn render_page(options: &Options) -> Result<String> {
-    let html = render::Html {
-        advanced: options.advanced,
-        lang: options.lang.clone(),
-        body: false,
+    let mut conversion = Conversion::new(&options.file, Direction::To(Target::Html));
+    conversion.advanced = options.advanced;
+    conversion.lang = options.lang.as_deref();
+    page_of(conversion.step().run())
+}
+
+/// The page `tomet html` wrote, or why it did not.
+fn page_of(outcome: Outcome) -> Result<String> {
+    let said = outcome.stderr.trim();
+    let reason = match &outcome.status {
+        Status::Passed => return Ok(outcome.stdout),
+        Status::NotFound => "tomet is not on PATH".to_owned(),
+        Status::CouldNotStart { reason } => format!("could not start tomet: {reason}"),
+        // What `tomet` said is the reason, in its own words.
+        Status::Failed { .. } | Status::Signalled { .. } if !said.is_empty() => said.to_owned(),
+        Status::Failed { code } => format!("`{}` exited with code {code}", outcome.command_line),
+        Status::Signalled { signal } => {
+            format!("`{}` was ended by signal {signal}", outcome.command_line)
+        }
     };
-    match convert::convert_file(
-        &options.file,
-        &Direction::To(Target::Html, html),
-        &Plan::default(),
-    )? {
-        Converted::Text(page) => Ok(page),
-        other => unreachable!("no destination was given, so the page is the text: {other:?}"),
-    }
+    bail!(reason)
 }
 
 /// The routes: the document at `/`.
@@ -70,8 +81,7 @@ pub fn serve(port: u16, options: Options, on_listening: impl FnOnce(SocketAddr))
 }
 
 async fn page(State(options): State<Arc<Options>>) -> (StatusCode, Html<String>) {
-    // Reading and rendering block, so they are not done on the runtime's own
-    // threads.
+    // Running `tomet` blocks, so it is not done on the runtime's own threads.
     let worker = Arc::clone(&options);
     let rendered = tokio::task::spawn_blocking(move || render_page(&worker)).await;
     match rendered {
@@ -112,82 +122,45 @@ fn escape_html(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::time::Duration;
 
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::{TcpListener, TcpStream};
 
     use super::*;
 
-    /// A document in a fresh temporary place, removed when dropped.
-    struct Doc {
-        dir: PathBuf,
-        file: PathBuf,
-    }
-
-    impl Doc {
-        fn new(name: &str, text: &str) -> Self {
-            // The time, not the process id: `process-door` keeps the whole
-            // `process` module out of every crate but `sisho-run`.
-            let nanos = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos();
-            let dir = std::env::temp_dir().join(format!("sisho-serve-{nanos}-{name}"));
-            fs::create_dir_all(&dir).unwrap();
-            let file = dir.join("doc.tmt");
-            fs::write(&file, text).unwrap();
-            Self { dir, file }
-        }
-
-        fn options(&self) -> Options {
-            Options {
-                file: self.file.clone(),
-                advanced: false,
-                lang: None,
-            }
-        }
-    }
-
-    impl Drop for Doc {
-        fn drop(&mut self) {
-            let _ = fs::remove_dir_all(&self.dir);
-        }
-    }
-
-    /// Serve `options` on a free port and make one request for `path`.
-    async fn get_response(options: Options, path: &str) -> String {
-        let listener = TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], 0)))
-            .await
-            .unwrap();
-        let addr = listener.local_addr().unwrap();
-        tokio::spawn(async move { axum::serve(listener, router(options)).await });
-
-        let mut stream = TcpStream::connect(addr).await.unwrap();
-        let request = format!("GET {path} HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\n\r\n");
-        stream.write_all(request.as_bytes()).await.unwrap();
-        let mut response = String::new();
-        stream.read_to_string(&mut response).await.unwrap();
-        response
+    fn outcome(status: Status, stdout: &str, stderr: &str) -> Outcome {
+        Outcome::in_process("tomet html", status, stdout, stderr, Duration::ZERO)
     }
 
     #[test]
-    fn the_page_is_what_convert_to_html_writes() {
-        let doc = Doc::new("page", "=[ Hello Serve ]\n\nBody.\n");
-        let page = render_page(&doc.options()).unwrap();
-        assert!(page.contains("<html"), "{page}");
-        assert!(page.contains("Hello Serve"), "{page}");
+    fn the_page_is_what_tomet_html_wrote() {
+        let page = page_of(outcome(Status::Passed, "<html>page</html>\n", "")).unwrap();
+        assert_eq!(page, "<html>page</html>\n");
     }
 
     #[test]
-    fn the_options_reach_the_rendering() {
-        let doc = Doc::new("options", "=[ Hello ]\n");
-        let page = render_page(&Options {
-            lang: Some("en".into()),
-            ..doc.options()
-        })
-        .unwrap();
-        assert!(page.contains("lang=\"en\""), "{page}");
+    fn a_failure_is_shown_in_tomets_own_words() {
+        let error = page_of(outcome(
+            Status::Failed { code: 1 },
+            "",
+            "error: expected ']'\n  --> doc.tmt:1:3\n",
+        ))
+        .unwrap_err();
+        assert_eq!(error.to_string(), "error: expected ']'\n  --> doc.tmt:1:3");
+    }
+
+    #[test]
+    fn a_failure_that_said_nothing_still_says_what_ran() {
+        let error = page_of(outcome(Status::Failed { code: 3 }, "", "")).unwrap_err();
+        assert!(error.to_string().contains("tomet html"), "{error}");
+        assert!(error.to_string().contains("code 3"), "{error}");
+    }
+
+    #[test]
+    fn a_tomet_that_is_not_installed_is_said_so() {
+        let error = page_of(outcome(Status::NotFound, "", "")).unwrap_err();
+        assert_eq!(error.to_string(), "tomet is not on PATH");
     }
 
     #[test]
@@ -206,56 +179,26 @@ mod tests {
         assert!(!page.contains("<here>"), "{page}");
     }
 
-    #[tokio::test]
-    async fn the_root_serves_the_document_with_status_200() {
-        let doc = Doc::new("root", "=[ Hello Serve ]\n");
-        let response = get_response(doc.options(), "/").await;
-
-        assert!(response.starts_with("HTTP/1.1 200"), "{response}");
-        assert!(response.contains("Hello Serve"), "{response}");
-    }
-
-    #[tokio::test]
-    async fn a_document_that_cannot_be_rendered_is_a_500_that_says_why() {
-        let doc = Doc::new("broken", "=[ unterminated\n");
-        let response = get_response(doc.options(), "/").await;
-
-        assert!(response.starts_with("HTTP/1.1 500"), "{response}");
-        assert!(response.contains("Could not render"), "{response}");
-        assert!(response.contains("doc.tmt"), "{response}");
-    }
-
+    /// Only `/` is a route, so nothing else runs `tomet`.
     #[tokio::test]
     async fn any_other_path_is_not_found() {
-        let doc = Doc::new("not-found", "=[ Hello ]\n");
-        let response = get_response(doc.options(), "/elsewhere").await;
-        assert!(response.starts_with("HTTP/1.1 404"), "{response}");
-    }
-
-    /// Rendered again on every request: edit the file and reload.
-    #[tokio::test]
-    async fn the_document_is_read_again_on_every_request() {
-        let doc = Doc::new("reload", "=[ First ]\n");
+        let options = Options {
+            file: PathBuf::from("doc.tmt"),
+            advanced: false,
+            lang: None,
+        };
         let listener = TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], 0)))
             .await
             .unwrap();
         let addr = listener.local_addr().unwrap();
-        let options = doc.options();
         tokio::spawn(async move { axum::serve(listener, router(options)).await });
 
-        async fn fetch(addr: SocketAddr) -> String {
-            let mut stream = TcpStream::connect(addr).await.unwrap();
-            let request = format!("GET / HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\n\r\n");
-            stream.write_all(request.as_bytes()).await.unwrap();
-            let mut response = String::new();
-            stream.read_to_string(&mut response).await.unwrap();
-            response
-        }
-
-        assert!(fetch(addr).await.contains("First"));
-        fs::write(&doc.file, "=[ Second ]\n").unwrap();
-        let after = fetch(addr).await;
-        assert!(after.contains("Second"), "{after}");
-        assert!(!after.contains("First"), "{after}");
+        let mut stream = TcpStream::connect(addr).await.unwrap();
+        let request =
+            format!("GET /elsewhere HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\n\r\n");
+        stream.write_all(request.as_bytes()).await.unwrap();
+        let mut response = String::new();
+        stream.read_to_string(&mut response).await.unwrap();
+        assert!(response.starts_with("HTTP/1.1 404"), "{response}");
     }
 }
