@@ -37,10 +37,12 @@ impl Tool {
     /// since its first, 0.1.0. When `sisho` comes to rely on something a later
     /// version added, this is where that is said: `tomet` 0.4.0 is the first
     /// whose conversion commands take a directory, `-` and `--dry-run` alike,
-    /// which `sisho convert` leaves to them.
+    /// which `sisho convert` leaves to them, and 0.5.0 the first with
+    /// `check-links` since it came back from `sisho`, and its `--json`, which
+    /// the counter reads.
     pub const fn min_version(self) -> Version {
         match self {
-            Tool::Tomet => Version::new(0, 4, 0),
+            Tool::Tomet => Version::new(0, 5, 0),
             Tool::Twrit => Version::new(0, 2, 0),
             Tool::Catasto => Version::new(0, 1, 0),
         }

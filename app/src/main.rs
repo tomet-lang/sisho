@@ -83,7 +83,6 @@ fn main() -> ExitCode {
     let result = match command {
         Command::Check(args) => commands::check::check(args),
         Command::Fix(args) => commands::fix::fix(args),
-        Command::CheckLinks(args) => Ok(commands::check_links::check_links(args)),
         Command::Serve(args) => Ok(commands::serve::serve(args)),
         Command::Spec(args) => Ok(commands::spec::spec(args)),
         Command::Convert(args) => match commands::convert::convert_direction(args) {

@@ -3,7 +3,8 @@ use std::sync::mpsc::{self, Receiver, Sender};
 
 use sisho_run::{Outcome, run_parallel_streaming};
 use sisho_tools::{Tool, Verdict, check_steps, fix_steps};
-use sisho_vault::links::{BrokenLink, Report, check as check_links};
+
+use crate::links::{self, BrokenLink, Report};
 
 /// An extension presented on the Board.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -235,8 +236,7 @@ impl Model {
         let dir = self.dir.clone();
         let sender = self.sender.clone();
         std::thread::spawn(move || {
-            let cache_path = sisho_vault::links::default_cache_path();
-            let res = check_links(&dir, &cache_path).map_err(|e| e.to_string());
+            let res = links::check(&dir);
             let _ = sender.send(WorkerMessage::LinksDone(res));
         });
     }

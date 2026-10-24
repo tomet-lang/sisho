@@ -1,12 +1,10 @@
 //! One file per command, and what they share.
 //!
-//! The work of the vault commands is `sisho-vault`'s and returns data; a
-//! command here shows it. A command that could not do what was asked prints
-//! `sisho: <reason>` and exits 1, as `tomet` does, so a script that moves from
-//! a `tomet` command to the `sisho` one keeps working.
+//! A command that could not do what was asked prints `sisho: <reason>` and
+//! exits 1, as `tomet` does, so a script that moves from a `tomet` command to
+//! the `sisho` one keeps working.
 
 pub mod check;
-pub mod check_links;
 pub mod convert;
 pub mod fix;
 pub mod serve;

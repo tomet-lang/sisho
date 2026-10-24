@@ -1,6 +1,6 @@
 //! Output that may go nowhere: a reader that closes the pipe early.
 //!
-//! `sisho check-links | head` closes the pipe after a few lines. Rust ignores
+//! `sisho --list | head` closes the pipe after a few lines. Rust ignores
 //! the signal that would normally end the program quietly, so a write then
 //! fails with `BrokenPipe`, and `println!` turns that into a panic. Writes
 //! here return the error instead, and the program ends quietly with the

@@ -9,9 +9,9 @@ publish = false
 [dependencies]
 sisho-run = { workspace = true }
 sisho-tools = { workspace = true }
-sisho-vault = { workspace = true }
 
 #= Crates.io
 anyhow = { workspace = true }
+serde_json = { workspace = true }
 crossterm = { workspace = true }
 ratatui = { workspace = true }

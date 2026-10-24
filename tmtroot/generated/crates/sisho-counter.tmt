@@ -1,6 +1,6 @@
 ::kind(api)
 
-::meta{crate: sisho-counter, dependencies: list(sisho-run, sisho-tools, sisho-vault), dependents: list(sisho-cli)}
+::meta{crate: sisho-counter, dependencies: list(sisho-run, sisho-tools), dependents: list(sisho-cli)}
 
 =[sisho-counter]
 
@@ -27,6 +27,44 @@ Precedence chain:
 5. `nano` (system fallback)
 
 ====[fn resolve_editor_with_lookup]
+
+==[Module links]
+
+The link check as the counter shows it: what `tomet check-links --json`
+reports about the links of a vault that point at nothing.
+
+`tomet` does the check, with the cache it keeps outside the vault; this
+runs it and reads the one JSON object it writes (the contract is
+`tomet`'s, in `spec/cli/check-links.tmt` there).
+
+===[Structs]
+
+====[struct Position]
+
+A line and a column, both counted from 1.
+
+====[struct BrokenLink]
+
+A link whose target does not exist.
+
+====[struct Unreadable]
+
+A document that could not be looked at.
+
+====[struct Report]
+
+What a run found.
+
+===[Functions]
+
+====[fn check]
+
+Check the links under `dir` by running `tomet check-links --json`.
+
+`Err` is why there is no report: `tomet` is not installed, or it could not
+do the check (a path that is not there, a cache that cannot be opened). A
+broken link is not an error; `tomet` exits 1 for it and the report is
+there all the same.
 
 ==[Module model]
 

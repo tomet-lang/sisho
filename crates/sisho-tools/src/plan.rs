@@ -9,6 +9,17 @@ fn step(tool: Tool, args: &[&str], path: &Path) -> Step {
     Step::new(name, tool.name()).args(args).arg(path)
 }
 
+/// The step that looks for links that point at nothing under `path`:
+/// `tomet check-links --json`.
+///
+/// It is not in [`check_steps`]: `tomet` has broken links of its own to clean
+/// up first. A caller that wants the list reads the JSON on standard output;
+/// the step exits 1 when there is a broken link or a document it could not
+/// read, and the JSON is there all the same.
+pub fn check_links_step(path: &Path) -> Step {
+    step(Tool::Tomet, &["check-links", "--json"], path)
+}
+
 /// The steps of `sisho check`: verify `path` without writing anything.
 ///
 /// Read-only, so a caller may run them at the same time. Plan order is the

@@ -59,25 +59,6 @@ Options:
 - `-v, --verbose`: Show the output of steps that passed too, not only of those that failed. Conflicts with `--json`.
 - `-j, --jobs <N>`: Number of parallel jobs to run. Only matters for the commands that run tools in parallel (`check`, `fix`). If a jobserver was inherited from the environment, it wins and `-j` is not used.
 
-==[ sisho check-links ]
-
-Check every `@file`, `@dir`, `@embed` and `@link` in a document, or in every document under a directory, for a local target that does not exist.
-
-What it learns about a document is kept in an SQLite cache in the user's cache directory (`~/.cache/tomet/` on Unix), never inside the vault, so checking a large vault again does not parse what has not changed. Exits 1 if a link is broken or a document could not be read.
-
-```text
-sisho check-links [OPTIONS] [PATH]
-```
-
-Arguments:
-
-- `[PATH]`: File or directory to check (defaults to ".").
-
-Options:
-
-- `--json`: Print the report as JSON instead of human-readable text.
-- `-j, --jobs <N>`: Number of parallel jobs to run. Only matters for the commands that run tools in parallel (`check`, `fix`). If a jobserver was inherited from the environment, it wins and `-j` is not used.
-
 ==[ sisho convert ]
 
 Change a document, or a directory of them, from one format to another.

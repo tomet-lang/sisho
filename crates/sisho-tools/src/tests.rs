@@ -1,6 +1,9 @@
 use std::path::Path;
 
-use crate::{Conversion, Direction, SHELF, Source, Target, Tool, check_steps, fix_steps, program};
+use crate::{
+    Conversion, Direction, SHELF, Source, Target, Tool, check_links_step, check_steps, fix_steps,
+    program,
+};
 
 fn lines(steps: &[sisho_run::Step]) -> Vec<String> {
     steps.iter().map(|s| s.command_line()).collect()
@@ -213,12 +216,13 @@ mod versions {
     }
 
     /// `sisho convert` leaves directories, `-` and `--dry-run` to `tomet`,
-    /// which does all of that for every conversion from 0.4.0 on.
+    /// which does all of that for every conversion from 0.4.0 on, and the
+    /// counter reads `tomet check-links --json`, which 0.5.0 brought back.
     #[test]
-    fn tomet_needs_the_version_whose_conversions_take_every_input() {
-        assert_eq!(Tool::Tomet.min_version(), v(0, 4, 0));
-        assert!(Tool::Tomet.judge(Some("tomet 0.4.0")).is_fine());
-        assert!(!Tool::Tomet.judge(Some("tomet 0.3.0")).is_fine());
+    fn tomet_needs_the_version_with_check_links_and_conversions_that_take_every_input() {
+        assert_eq!(Tool::Tomet.min_version(), v(0, 5, 0));
+        assert!(Tool::Tomet.judge(Some("tomet 0.5.0")).is_fine());
+        assert!(!Tool::Tomet.judge(Some("tomet 0.4.0")).is_fine());
     }
 }
 
@@ -299,5 +303,24 @@ mod conversions {
         assert_eq!(Source::parse("md"), Some(Source::CommonMark));
         assert_eq!(Source::parse("PANDOC"), Some(Source::Pandoc));
         assert_eq!(Source::parse("html"), None);
+    }
+}
+
+#[test]
+fn the_link_check_is_tomets_and_asks_for_json() {
+    let step = check_links_step(Path::new("vault"));
+    assert_eq!(step.command_line(), "tomet check-links --json vault");
+    assert_eq!(step.name(), "tomet check-links --json");
+}
+
+/// Not part of `check` yet: `tomet` has broken links to clean up first.
+#[test]
+fn check_does_not_run_the_link_check_yet() {
+    for step in check_steps(Path::new(".")) {
+        assert!(
+            !step.command_line().contains("check-links"),
+            "{}",
+            step.command_line()
+        );
     }
 }

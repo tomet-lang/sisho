@@ -20,7 +20,6 @@ sisho-run = { workspace = true }
 sisho-sdk = { workspace = true }
 sisho-serve = { workspace = true }
 sisho-tools = { workspace = true }
-sisho-vault = { workspace = true }
 
 #= Tomet
 tomet-load-config = { workspace = true }

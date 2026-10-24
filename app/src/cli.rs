@@ -49,15 +49,6 @@ pub enum Command {
     /// order, each reported as soon as it ends. One failing step does not
     /// stop the others. Run `sisho check` afterwards to confirm.
     Fix(RunArgs),
-    /// Check every `@file`, `@dir`, `@embed` and `@link` in a document, or in
-    /// every document under a directory, for a local target that does not
-    /// exist.
-    ///
-    /// What it learns about a document is kept in an SQLite cache in the
-    /// user's cache directory (`~/.cache/tomet/` on Unix), never inside the
-    /// vault, so checking a large vault again does not parse what has not
-    /// changed. Exits 1 if a link is broken or a document could not be read.
-    CheckLinks(CheckLinksArgs),
     /// Change a document, or a directory of them, from one format to another.
     ///
     /// `--to` reads Tomet and writes commonmark, html, typst or pandoc (its JSON
@@ -115,16 +106,6 @@ pub struct RunArgs {
     /// Show the output of steps that passed too, not only of those that failed.
     #[arg(short, long, conflicts_with = "json")]
     pub verbose: bool,
-}
-
-#[derive(Args)]
-pub struct CheckLinksArgs {
-    /// File or directory to check (defaults to ".").
-    #[arg(default_value = ".")]
-    pub path: PathBuf,
-    /// Print the report as JSON instead of human-readable text.
-    #[arg(long)]
-    pub json: bool,
 }
 
 #[derive(Args)]

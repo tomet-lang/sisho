@@ -2,7 +2,8 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use sisho_run::{Outcome, Status};
-use sisho_vault::links::{BrokenLink, Position, Report};
+
+use crate::links::{BrokenLink, Position, Report};
 
 use crate::model::{ExtensionItem, FocusedPane, Model, StepSlot, WorkerMessage};
 

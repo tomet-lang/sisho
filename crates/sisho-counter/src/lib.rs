@@ -5,6 +5,7 @@
 //! - **Counter**: Action prompt bar to run check, fix, check-links, or open desk.
 
 pub mod editor;
+pub mod links;
 pub mod model;
 pub mod screen;
 pub mod ui;

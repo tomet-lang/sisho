@@ -5,7 +5,6 @@ members = [
   "crates/sisho-counter",
   "crates/sisho-run",
   "crates/sisho-tools",
-  "crates/sisho-vault",
   "crates/sisho-serve",
   "crates/sisho-sdk",
 ]
@@ -23,18 +22,12 @@ sisho-cli = { path = "app" }
 sisho-counter = { path = "crates/sisho-counter" }
 sisho-run = { path = "crates/sisho-run" }
 sisho-tools = { path = "crates/sisho-tools" }
-sisho-vault = { path = "crates/sisho-vault" }
 sisho-serve = { path = "crates/sisho-serve" }
 sisho-sdk = { path = "crates/sisho-sdk" }
 
 #= Tomet -- internal crates, as twrit takes them; the facade is not for apps
 tomet-ast = { git = "https://github.com/tomet-lang/tomet.git" }
-tomet-lexer = { git = "https://github.com/tomet-lang/tomet.git" }
-tomet-config = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-parser = { git = "https://github.com/tomet-lang/tomet.git" }
-tomet-links = { git = "https://github.com/tomet-lang/tomet.git", features = [
-  "cache",
-] }
 tomet-load-config = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-spec = { git = "https://github.com/tomet-lang/tomet.git" }
 

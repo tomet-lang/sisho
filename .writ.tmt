@@ -19,7 +19,7 @@ does not relax the rule to fit the change it wanted to make.
 
   layers: {
     2: list( "app" )
-    1: list( "crates/sisho-tools", "crates/sisho-vault", "crates/sisho-serve", "crates/sisho-counter" )
+    1: list( "crates/sisho-tools", "crates/sisho-serve", "crates/sisho-counter" )
     0: list( "crates/sisho-run", "crates/sisho-sdk" )
   }
 }
@@ -31,7 +31,7 @@ upward ones are not.
 Layer 0 runs commands and knows no tool by name (`sisho-run`), and provides
 the extension SDK protocol types (`sisho-sdk`). Layer 1 holds what `sisho`
 knows about the core tools (`sisho-tools`) and what it implements itself
-(`sisho-vault`, `sisho-serve`, `sisho-counter`). Layer 2 is the program.
+(`sisho-serve`, `sisho-counter`). Layer 2 is the program.
 
 `sisho-serve` is its own crate so that the HTTP stack stays out of the
 build of every other command. `sisho-counter` is its own crate so that
@@ -63,9 +63,9 @@ external crate except what is in the allowlist: `jobserver` and what it brings
 in (`libc`, `getrandom`, `cfg-if`, `r-efi`). None of it is a `tomet-*` crate;
 a `jobserver` update may change the list.
 
-Only what `sisho` implements itself -- `sisho-vault` (`check-links`) and
-`sisho spec` in `app` -- uses the `tomet` crates, through git dependencies.
-Conversion is not among them: `sisho convert` and `sisho-serve` call the
+Only what `sisho` implements itself -- `sisho spec` in `app` -- uses the
+`tomet` crates, through git dependencies. Conversion and the link check are
+not among them: `sisho convert`, `sisho-serve` and `sisho-counter` call the
 `tomet` binary.
 
 ---[ Why ]---

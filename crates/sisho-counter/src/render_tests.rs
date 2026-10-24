@@ -123,13 +123,13 @@ fn renders_broken_links_list() {
     let mut terminal = Terminal::new(backend).unwrap();
 
     let mut model = create_mock_model();
-    model.links_report = Some(sisho_vault::links::Report {
+    model.links_report = Some(crate::links::Report {
         files_scanned: 10,
         links_checked: 42,
-        broken: vec![sisho_vault::links::BrokenLink {
+        broken: vec![crate::links::BrokenLink {
             source: PathBuf::from("docs/intro.tmt"),
             target: "missing.tmt".to_string(),
-            at: Some(sisho_vault::links::Position {
+            at: Some(crate::links::Position {
                 line: 15,
                 column: 1,
             }),

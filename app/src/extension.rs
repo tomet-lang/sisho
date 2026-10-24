@@ -237,7 +237,7 @@ pub fn scan_in(dirs: impl IntoIterator<Item = PathBuf>) -> Vec<ExtensionEntry> {
 fn is_builtin_command_or_tool(word: &str) -> bool {
     matches!(
         word,
-        "check" | "fix" | "check-links" | "convert" | "serve" | "spec"
+        "check" | "fix" | "convert" | "serve" | "spec"
     ) || sisho_tools::program(word).is_some()
 }
 

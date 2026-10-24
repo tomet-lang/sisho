@@ -29,7 +29,6 @@ The design memo is @link(tmtroot/dev/design.tmt).
 sisho                # interactive counter dashboard (when run on a terminal with no arguments)
 sisho check [path]   # verify without writing; steps run at the same time
 sisho fix [path]     # regenerate, export, format; steps run one after another
-sisho check-links [path]   # find links that point at nothing (cached, outside the vault)
 sisho convert <path|-> --to F | --from F   # one document, standard input or a directory, to or from Tomet (tomet converts)
 sisho serve <file>         # a document as HTML over HTTP on 127.0.0.1, rendered again per request
 sisho desk [path]          # interactive desk (extension): migrate Markdown, edit metadata, search structure
@@ -41,17 +40,17 @@ Both take `--json`, and `check` and `fix` take `--verbose` to show the output of
 
 `check` runs `tomet check`, `tomet format --check`, `tomet export --check`, `twrit check` and `catasto check`: the gate each repository's `docs-check` spelled out by hand. `fix` runs `twrit check --fix`, `tomet export` and `tomet format -i`, in that order. `catasto check` has nothing to check where there is no `catasto.ctmt`, and says nothing then, so `check` needs no condition for it; `fix` does not run `catasto sync` (it reaches the network and puts a managed file back to what `catasto.lock` says), which is left to `sisho catasto sync`. `check-links` is not part of either: it is a command of its own.
 
-`sisho` needs `tomet` and `twrit` to be at least 0.2.0, the version that gave `--version` its meaning, and `catasto` 0.1.0, and reads `--version` of each to know. A tool that is older, or that cannot say its version, is a failed step called `<tool> version` first in the report, which says to update it. `check` goes on with the rest, since it only reads. `fix` writes nothing and exits 1, since it would have an older tool rewrite files. A tool that is not installed is reported by its own steps. Nothing here depends on how the tools were installed.
+`sisho` needs `tomet` 0.5.0 (the first with `check-links` again, and conversions that take a directory), `twrit` 0.2.0, the version that gave `--version` its meaning, and `catasto` 0.1.0, and reads `--version` of each to know. A tool that is older, or that cannot say its version, is a failed step called `<tool> version` first in the report, which says to update it. `check` goes on with the rest, since it only reads. `fix` writes nothing and exits 1, since it would have an older tool rewrite files. A tool that is not installed is reported by its own steps. Nothing here depends on how the tools were installed.
 
-What belongs to the language stays in `tomet`, which `sisho` reaches with `sisho tomet ...`: `sisho tomet new` makes a document from a blueprint, `sisho tomet refactor` migrates old spellings, `sisho tomet export` writes the outputs a document declares for itself.
+What belongs to the language stays in `tomet`, which `sisho` reaches with `sisho tomet ...`: `sisho tomet new` makes a document from a blueprint, `sisho tomet refactor` migrates old spellings, `sisho tomet export` writes the outputs a document declares for itself, `sisho tomet check-links` looks for links that point at nothing (it keeps a cache outside the vault). It is not a step of `check` yet: `tomet` has broken links to clean up first.
 
 Exit codes of `check` and `fix`: 0 when every step passed, 1 when any did not, 2 when `sisho` itself could not do its job (for example a usage error).
 
-Commands that work on the vault itself, like `check-links`, `convert` and `serve`, exit 0 on success and 1 when they could not do what was asked, as `tomet` does; a usage error is 2.
+Commands that work on the vault itself, like `convert` and `serve`, exit 0 on success and 1 when they could not do what was asked, as `tomet` does; a usage error is 2.
 
-The behaviour of `check-links` and `serve`, which moved here from `tomet`, is written down under @dir(tmtroot/spec/cli/).
+The behaviour of `serve`, which moved here from `tomet`, is written down under @dir(tmtroot/spec/cli/).
 
-When the reader of the output goes away early (`sisho check-links | head`), `sisho` ends quietly with 141, which is 128 plus `SIGPIPE`, as a shell reports it.
+When the reader of the output goes away early (`sisho --list | head`), `sisho` ends quietly with 141, which is 128 plus `SIGPIPE`, as a shell reports it.
 When run with no arguments on an interactive terminal, `sisho` opens its own counter dashboard (`sisho-counter`), showing project health, tool and extension status, and offering on-demand check and fix actions. Running `sisho` without a terminal prints command-line help. The contract is written down under @link(tmtroot/spec/cli/counter.tmt).
 
 `sisho <tool> ...` is a pass-through: the tool gets the terminal and everything after its name, flags included, and its exit code becomes `sisho`'s. A tool that is not installed exits 127, one that cannot be started 126, one ended by a signal 128 plus the signal, as `env` does.
@@ -86,7 +85,6 @@ Each tool is built as its own flake builds it, so the binary cache of `tomet` se
 
 -| @dir(app) (`sisho-cli`) -- Main CLI binary (`sisho`). Layer 2.
 -| @dir(crates/sisho-tools) (`sisho-tools`) -- What `sisho` knows about `tomet`, `twrit`, `catasto` and `tandr`. Layer 1.
--| @dir(crates/sisho-vault) (`sisho-vault`) -- The vault commands `sisho` does itself: `check-links`. Layer 1.
 -| @dir(crates/sisho-serve) (`sisho-serve`) -- `serve` (it runs `tomet html` for each request), kept apart so the HTTP stack stays out of other builds. Layer 1.
 -| @dir(crates/sisho-counter) (`sisho-counter`) -- Interactive counter dashboard, kept apart so the TUI stack stays out of the core CLI. Layer 1.
 -| @dir(crates/sisho-run) (`sisho-run`) -- Runs external commands and collects outcomes. The only crate that starts a process. Layer 0.

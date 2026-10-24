@@ -29,7 +29,7 @@ mod version;
 mod tests;
 
 pub use convert::{Conversion, Direction, Source, Target};
-pub use plan::{check_steps, fix_steps};
+pub use plan::{check_links_step, check_steps, fix_steps};
 pub use program::{Program, SHELF, program, programs};
 pub use tool::Tool;
 pub use version::{Verdict, Version, judge};

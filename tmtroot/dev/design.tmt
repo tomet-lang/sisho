@@ -29,7 +29,7 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 
 - コア 3 つ(tomet・twrit・tandr)は sisho が直書きで知っている。自己申告や探索の仕組みは入れない。
 - 横断の動詞は、各ツールを子プロセスとして呼ぶ。crate として取り込まない。twrit が tomet のあるリビジョンを固定し、sisho が別のリビジョンを固定すると、同じ型が 2 つのバージョンで存在する菱形依存になるため。
-- sisho が自前で実装するもの(`check-links` と `sisho spec`。2026-10-24 までは変換系も)だけ、tomet の crate を git 依存で使う。変換は tomet のコマンドを呼ぶ(「変換系」の節)。入口は facade(`crates/tomet`)ではなく、内部 crate を直接使う。facade は `apps/*` が使わないよう意図して作られていて、コマンドが必要とする `tomet-workspace`・`tomet-indexer`・`tomet-lexer`・`tomet-load-config` を持たない(2026-10-18 にコードで確認。当初の「入口は facade」は誤りだった)。twrit も同じく内部 crate を直接使っている。
+- sisho が自前で実装するもの(`sisho spec` だけ。2026-10-24 までは変換系と `check-links` も)だけ、tomet の crate を git 依存で使う。変換と `check-links` は tomet のコマンドを呼ぶ(「変換系」の節、「check-links を tomet に戻す」の項)。入口は facade(`crates/tomet`)ではなく、内部 crate を直接使う。facade は `apps/*` が使わないよう意図して作られていて、コマンドが必要とする `tomet-workspace`・`tomet-indexer`・`tomet-lexer`・`tomet-load-config` を持たない(2026-10-18 にコードで確認。当初の「入口は facade」は誤りだった)。twrit も同じく内部 crate を直接使っている。
 - 固定は `Cargo.lock` で行う。隣のチェックアウトで試したい変更も、push してから `cargo update` で取り込む。`.cargo/config.toml` の `[patch]` は使わない(`Cargo.lock` に path が書かれて `source` が消え、Nix のビルドが取りに行けなくなる。2026-10-24 に sisho-desk で実際に起きた)。
 - ツール間の約束は小さく保つ。終了コード、`--json`、`--version`。
 - バージョンのずれは、Nix に頼らずに、実行時に最低の版を確かめて解く(2026-10-18、cargo の `rust-version` と同じ形)。sisho は各ツールの最低の版を持ち(いまは tomet が 0.4.0、twrit が 0.2.0。tomet は 2026-10-24 に、変換の入力と出力先を 6 つのコマンドで揃えた 0.4.0 へ上げた)、`check` と `fix` の頭で `--version` を読んで比べる。古い、または版を返せないツールは、「`tomet version`」という失敗のステップとして報告の先頭に出て、`update tomet` と言う。`check` は読み取りだけなので、そのまま続ける。`fix` は書き込むので、何も書かずに 1 で終わる。入っていないツールは、そのツール自身のステップが「not found」と言うので、重ねては言わない。
@@ -64,12 +64,12 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 
 - `sisho check`: 何も書き換えずに全体を検証する。tomet の `check` / `format --check` / `export --check`、twrit の `check` の 4 つ(2026-10-18 に確定)。これは各レポの `docs-check` が手書きしてきたゲートそのもの。当初の案には sisho 自前の `export --check`、`check-links`、`refactor --check` もあったが、入れない(下記)。
 - `sisho fix`: 直せるものを直す。twrit の `check --fix`、tomet の `export`、tomet の `format -i` を、この順で含む。生成物を先に作り直し、そこから出力を書き出し、最後に整形する。当初の案には `refactor -i` もあったが、入れない(下記)。
-- `check-links` は `check` に入れず、単独のコマンドのままにする。今のどのゲート(各レポの `docs-check`)にも入っておらず、入れると tomet が 69 件、twrit が 2 件の壊れたリンクで今日から赤くなる(2026-10-18 に実際に走らせて確認。実在しないディレクトリへの参照で、古い記述として本物)。片付けてから `check` に加える。
+- `check-links` は `check` に入れない。今のどのゲート(各レポの `docs-check`)にも入っておらず、入れると tomet が 69 件、twrit が 2 件の壊れたリンクで今日から赤くなる(2026-10-18 に実際に走らせて確認。実在しないディレクトリへの参照で、古い記述として本物。2026-10-24 の実測では tomet が 90 件、twrit が 2 件、sisho が 0 件)。片付けてから `check` に加える。2026-10-24 から `check-links` は tomet のコマンドで、`sisho` の動詞ではない。`sisho tomet check-links` で届き、`check` に入るときは tomet の外部ステップになる(「check-links を tomet に戻す」の項)。
 - `refactor -i` は `fix` に入れない。構文木から文書を印刷し直すのでコメントが落ちる。日常的に叩く `fix` に入れると、気づかないうちにコメントが消える。
 - `refactor` は、sisho には置かない(2026-10-18 に利用者が決めた)。言語が書き方を変えたときの移行の規則は、言語の版と一緒に変わるので、tomet に残る。`@meta{type: ..}` を `@kind(..)` に直す移行は、cargo にとっての `cargo fix --edition` に当たり、規則は rustc 側が持つ。そもそも要るのかも未定で、まずは tomet だけにする。`sisho tomet refactor ...` で届く。当初は sisho にも `refactor` と `check` の中の `refactor --check` を実装したが、この決定で外した。
 - `new` も sisho には置かない(同じ日に決めた)。blueprint の具体化は言語の式の評価を使うので tomet に置く。`sisho tomet new ...` で届く。これも一度 sisho に実装して、外した。
 - `export` も sisho には置かない(同じ日に、一度移したあとで決めた)。理由は 3 つ。(1) `@config(export: { type, path })` は文書自身の宣言で、その解釈(`ExportType`・`document_config`・`export_path_for`)は tomet の lib にある。rustc が文書内の宣言(`#![crate_type]`)を自分で解釈するのと同じ位置づけ。(2) 重い依存がない。tomet が変換のために持つ lib を使うだけ。(3) 消すと、tomet 自身の文書の生成(`just docs` の `tomet export .`)が sisho に依存し、sisho は tomet に依存するので、flake の相互参照の輪ができる。残せば、tomet と twrit の `just docs` と `docs-check` は 1 文字も変わらない。`sisho tomet export ...` で届き、`check` と `fix` には tomet の外部ステップとして入る。
-- 自前のステップ(sisho がプロセス内で実行するもの)は、ツールのステップと同じ `Outcome` を返せるように、`sisho-run` に型と `Job` が用意してある。2026-10-18 に `export` と `refactor` を tomet に残すと決めたので、いま `check` と `fix` に自前のステップは 1 つもなく、すべて外部ツールのステップ。`check-links` を `check` に入れる日が来たら、最初の自前のステップになる。
+- 自前のステップ(sisho がプロセス内で実行するもの)は、ツールのステップと同じ `Outcome` を返せるように、`sisho-run` に型と `Job` が用意してある。2026-10-18 に `export` と `refactor` を tomet に残すと決めたので、いま `check` と `fix` に自前のステップは 1 つもなく、すべて外部ツールのステップ。(2026-10-24: `check-links` は tomet のコマンドになったので、`check` に入る日が来ても外部ツールのステップで、自前のステップは要らない。)
 - 失敗の扱いは tomet の `check` を踏襲する。1 つのツールが失敗しても残りを最後まで走らせ、最後に 1 つでも失敗があれば非ゼロで終了する。出力はツールごとにまとめ、どれが落ちたか分かるようにする。
 
 その他の動詞は横断にしない。
@@ -110,11 +110,20 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 ===[ tomet から移すコマンド ]
 
 - 振り分けの基準(2026-10-18、rustc と cargo の関係から): 文書(と明示された入力)だけで意味が決まるものは tomet(rustc / rustfmt に当たる)、vault の宣言・走査・キャッシュ・画面といったエコシステムの話は sisho(cargo に当たる)。cargo が依存解決や workspace を扱い、rustc は言語を扱うのと同じ。
-- 移す 3 つ: `check-links` / `serve` / `tui`。当初は `new`・`export`・`refactor` も移す 6 つだったが、利用者が `new` と `refactor` を tomet に残すと決め、`export` も見直して残すことにした(上の `refactor`・`new`・`export` の項)。
+- 移す 3 つ: `check-links` / `serve` / `tui`(2026-10-24 に `check-links` は tomet に戻した。「check-links を tomet に戻す」の項)。当初は `new`・`export`・`refactor` も移す 6 つだったが、利用者が `new` と `refactor` を tomet に残すと決め、`export` も見直して残すことにした(上の `refactor`・`new`・`export` の項)。
 - 理由の一つは依存。tomet の CLI は axum・tokio・tomet-tui まで引いていて、言語コアの CLI としては重い。
 - 最終形は tomet から撤去して sisho に移す。互換 alias は置かず、一度に移す。tomet は crates.io に公開せず、利用者はこのエコシステム内に限られるので、呼び出し側を一度に直せば済む。
 - tomet に残す: `check` / `ast` / `format` / `stats` / `roundtrip` / `cli-docs`、単一文書の変換 6 つ、`new`、`refactor`。言語そのものに属する操作。
-- sisho は tomet の crate を git 依存で取り込み続けるが、範囲は狭まった(2026-10-24)。経緯: `sisho-vault` は、tomet から移したコマンドを動かすために crate を取り込んだ(2026-10-18)。`new`・`refactor`・`export` が tomet に戻り、`tui` が `sisho-desk` に出て(2026-10-20)、最後に残った理由が `convert`(とその描画を使う `serve`)だった。それも、文書だけで意味が決まるものは tomet、という上の基準に従って tomet に戻した(「変換系」の節)。いま crate を使うのは、`check-links`(`tomet-links` の走査とキャッシュ。vault の話なので sisho の仕事)と `sisho spec`(`tomet-spec`。どのレポでも要る)だけで、`sisho-vault` が取り込む tomet の crate は 14 から 5 に、ワークスペースが宣言するのは 16 から 7 になった。これは悪いことではなく、cargo が workspace や依存というエコシステムを知っているのと同じで、sisho は vault といった tomet 固有の知識を持つ側にいる。代償は、二重固定(`Cargo.lock` と `flake.lock`)と、tomet の内部 API への追随で、どちらも範囲は縮んだ。
+- sisho は tomet の crate を git 依存で取り込み続けるが、範囲は狭まった(2026-10-24)。経緯: `sisho-vault` は、tomet から移したコマンドを動かすために crate を取り込んだ(2026-10-18)。`new`・`refactor`・`export` が tomet に戻り、`tui` が `sisho-desk` に出て(2026-10-20)、最後に残った理由が `convert`(とその描画を使う `serve`)だった。それも、文書だけで意味が決まるものは tomet、という上の基準に従って tomet に戻した(「変換系」の節)。いま crate を使うのは `sisho spec`(`tomet-spec`。どのレポでも要る)だけになった。`check-links` も同じ日に tomet に戻し、`sisho-vault` ごと消えた。`sisho-vault` が取り込む tomet の crate は 14 から 5 を経て 0 に、ワークスペースが宣言するのは 16 から 4(`tomet-ast`・`tomet-parser` は `spec` のテストだけ)になった。これは悪いことではなく、cargo が workspace や依存というエコシステムを知っているのと同じで、sisho は vault といった tomet 固有の知識を持つ側にいる。代償は、二重固定(`Cargo.lock` と `flake.lock`)と、tomet の内部 API への追随で、どちらも範囲は縮んだ。
+- check-links を tomet に戻す(2026-10-24 決定)。`tomet check-links [PATH] [--json]` が処理を持ち、sisho に `check-links` の動詞は置かない。届くのは `sisho tomet check-links` で、きれいになったら `sisho check` の外部ステップになる。
+  -. 理由。処理は `tomet-links` にあり、sisho の `links.rs` は位置の算出と出力の包みだった。`tomet-links` は言語の核(`tomet-semantics`・`tomet-load`・`tomet-indexer`)も使っていて、リンクの指す先は文書と vault の設定だけで決まる。振り分けの基準(文書と明示された入力だけで意味が決まるものは tomet)に当たる。
+  -. sisho に置いた理由は、2 つとも崩れていた。tomet の CLI が重い(axum・tokio・TUI)というのは、`serve` と `tui` が出て消えた。走査とキャッシュはエコシステムの話、というのは、sisho が自前の宣言を持たず(vault の宣言は tomet の `@config`)、キャッシュも `~/.cache/tomet/` の tomet のものだったので、成り立たなかった。
+  -. sisho は、`sisho spec` を除いて、tomet の crate を取り込まなくなった。コア 3 つは子プロセスで呼ぶ、という原則の例外がなくなり、`sisho-vault` は消えた。
+  -. 契約は `--json` の 1 つの JSON オブジェクト。`files_scanned`・`links_checked`・`broken`(`source`・`target`・`line`・`column`。位置が分からなければ `null`)・`errors`(`source`・`error`)。形は sisho が持っていたものと同じで、出力は 1 バイトも違わない。仕様は tomet の `spec/cli/check-links.tmt`。
+  -. 終了コードは、切れたリンクか読めなかった文書があれば 1(標準出力には JSON が出る)。調べること自体ができなかったときも 1 だが、標準出力は空で、標準エラーに理由が出る。counter はこの違いで、報告と失敗を分ける。
+  -. counter(`l`)は `tomet check-links --json` を `Step` で実行して読む。型は counter が持つ。tomet が無ければ「tomet is not on PATH」を Board に出す。
+  -. tomet の最低の版は 0.5.0(`check-links` が戻った版)。
+  -. `sisho check` に入れる条件は変わらない。tomet の切れたリンクを片付けてから(2026-10-24 の実測: tomet が 90 件、twrit が 2 件、sisho が 0 件。tomet の多くは旧 `docs/` への参照)。
 - コードの置き場(2026-10-18 に合意)。コマンドは bin crate(`apps/cli/src/commands/*.rs`)の中にあり、テストも同居しているので、lib としては依存できない。引数の解釈・走査・出力という糊の部分(`export` 約 470 行、`check_links` 約 160 行、`serve` 約 60 行、共通の `util` 約 100 行)をテストごと sisho に移す。(`new` と `refactor` も一度は移したが、tomet に残すと決めたので外した。)実際の処理を持つ lib(`tomet-links`・`tomet-html`・`tomet-semantics`・`tomet-workspace` など)は tomet に残る。
 - `tui` も sisho に移す(のちに 2026-10-20、最初のリファレンス拡張 `sisho-desk` として独立リポジトリへ移出)。`apps/tui`(`tomet-tui`)は tomet 固有の作業台だが、自前のものとして sisho が持った。tomet 側の crate は、sisho 側ができたあとの撤去で消えた。
 - 順序: まず sisho にコピーして動かし、tomet 側の撤去は最後に一度に行う。間は両方にコードがあるが、tomet は動き続ける。`serve` は `convert` の描画の糊(`render_file`)に依存するので、`convert` のあとに作る。`sisho-serve` は同じ層の `sisho-vault` に依存してよい。(2026-10-24: `serve` も `tomet html` を呼ぶ形になり、`sisho-serve` は `sisho-run` と `sisho-tools` だけに依存する。)
@@ -149,11 +158,11 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
      - Board (掲示領域・上部〜中央): プロジェクトの現在の健全性とツールの状態を俯瞰する静的な情報表示。
        - Tools & Extensions: コアツールの存在・版・適合判定 (`sisho-tools`)、および PATH 上の拡張一覧 (`sisho-counter` に渡されたデータ)。
        - Checks & Integrity: `check` の各ステップの合否、所要時間、選択されたステップの標準出力/エラー出力プレビュー。
-       - Broken Links: `sisho-vault` の `check-links` で得られた壊れたリンク一覧。
+       - Broken Links: `tomet check-links --json` で得られた壊れたリンク一覧。counter が子プロセスとして実行し、JSON を読む(2026-10-24 から。それまでは `sisho-vault` をプロセス内で呼んでいた)。
      - Counter (受付領域・下部): 司書への仕事の依頼・実行選択。
        - `c`: `check` の再実行。
        - `f`: `fix` の実行。ファイルを書き換えるため `Apply fixes? [y/N]` の確認プロンプトを Counter に表示。
-       - `l`: `check-links` の再実行。
+       - `l`: リンクの検査(`tomet check-links --json`)の再実行。
        - `d`: 拡張 `sisho-desk` の起動(端末を引き渡し、終了後に復帰)。
        - `q`: 終了。
   3. 画面スケッチ:
@@ -225,8 +234,8 @@ twrit の AGENTS.md と tomet の CLI のコードから見えた依存。
 - 製品と開発環境を別の flake に分ける整理(各ツールの flake の入力を葉だけにする)。束ねには要らなかった。ツールの flake を sisho 以外から直接取り込む人が増え、開発用の入力が持ち込まれて困るようになったら、再考する。
 - 入力名を変えたツールがあれば、sisho の `flake.lock` の固定を進める(切る指定は、固定している版がその入力名を持つときだけ効く)。
 - tandr は実装がまだない。`sisho check` / `sisho fix` に tandr を含める時期と、その中身は、tandr の CLI が決まってから。
-- tomet が二重に固定される。`Cargo.lock`(ライブラリとして取り込む tomet)と `flake.lock`(dev shell の `tomet` バイナリ)。ずれると、`sisho check` が呼ぶ `tomet` と、sisho 内蔵の `check-links` と `spec` が別の版の挙動になる。両者の一致を確かめる仕組みは、あとで考える。(2026-10-24: 変換と `serve` はバイナリを呼ぶ形になったので、ずれが効く面は `check-links` と `spec` に狭まった。)
-- tomet の内部 API の変更への追随。固定が先に進んでも sisho のビルドは壊れないが、固定を進めるたびに取り込み側を直す必要がある。(2026-10-24: 追随が要る crate は 5 つの vault の crate と `tomet-spec` に縮んだ。)
+- tomet が二重に固定される。`Cargo.lock`(ライブラリとして取り込む tomet)と `flake.lock`(dev shell の `tomet` バイナリ)。ずれると、`sisho check` が呼ぶ `tomet` と、sisho 内蔵の `spec` が別の版の挙動になる。両者の一致を確かめる仕組みは、あとで考える。(2026-10-24: 変換と `serve` と `check-links` はバイナリを呼ぶ形になったので、ずれが効く面は `spec`(`tomet-spec` が描く `sisho spec cli` の形)だけに狭まった。)
+- tomet の内部 API の変更への追随。固定が先に進んでも sisho のビルドは壊れないが、固定を進めるたびに取り込み側を直す必要がある。(2026-10-24: 追随が要る crate は `tomet-spec` と、設定を探す `tomet-load-config` に縮んだ。)
 - `--json` 出力を、ツールごとの出力からどう集約するか。(`check` / `fix` の `--json` は 2026-10-18 に実装済み。ここで残っているのは、各ツール自身の `--json` を解釈して集約するかどうか。)
 - 横断の `check` が呼ぶ個別の呼び出し(tomet の `check` / `format --check` / `export --check` の分け方)の細部。
 - (2026-10-20) `sisho-desk` の切り出しに伴う `.writ.tmt` の更新(作者のみが編集)。`sisho/.writ.tmt` からの `sisho-tui` 記述の除去と、`sisho-desk/.writ.tmt` への `no-sisho-crates` 規則(`guard: { twrit: door }`)の追加。
