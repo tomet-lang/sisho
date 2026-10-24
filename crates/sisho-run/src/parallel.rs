@@ -87,4 +87,3 @@ where
 pub fn run_parallel(jobs: Vec<Job<'_>>) -> Vec<Outcome> {
     run_parallel_streaming(jobs, |_, _| {})
 }
-

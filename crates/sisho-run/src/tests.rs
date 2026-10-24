@@ -105,7 +105,6 @@ fn parallel_streaming_delivers_outcomes_as_they_finish() {
     assert_eq!(streamed[1].1, "slow\n");
 }
 
-
 #[test]
 fn parallel_jobs_overlap_in_time() {
     let a = sh("sleep 0.5");

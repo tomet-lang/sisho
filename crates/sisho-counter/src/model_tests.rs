@@ -56,10 +56,13 @@ fn individual_step_completion_updates_only_its_slot() {
         duration: Duration::from_millis(50),
     };
 
-    model.sender.send(WorkerMessage::CheckStepDone {
-        index: 0,
-        outcome: outcome1.clone(),
-    }).unwrap();
+    model
+        .sender
+        .send(WorkerMessage::CheckStepDone {
+            index: 0,
+            outcome: outcome1.clone(),
+        })
+        .unwrap();
 
     model.poll_background();
 
@@ -82,10 +85,13 @@ fn individual_step_completion_updates_only_its_slot() {
         duration: Duration::from_millis(100),
     };
 
-    model.sender.send(WorkerMessage::CheckStepDone {
-        index: 1,
-        outcome: outcome2.clone(),
-    }).unwrap();
+    model
+        .sender
+        .send(WorkerMessage::CheckStepDone {
+            index: 1,
+            outcome: outcome2.clone(),
+        })
+        .unwrap();
 
     model.poll_background();
 

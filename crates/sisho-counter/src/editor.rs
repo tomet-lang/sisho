@@ -75,8 +75,12 @@ fn build_from_sisho_editor(
     // Check if it's a template containing `{file}`
     if trimmed.contains("{file}") {
         let file_str = file.to_string_lossy();
-        let line_str = line.map(|l| l.to_string()).unwrap_or_else(|| "1".to_string());
-        let col_str = column.map(|c| c.to_string()).unwrap_or_else(|| "1".to_string());
+        let line_str = line
+            .map(|l| l.to_string())
+            .unwrap_or_else(|| "1".to_string());
+        let col_str = column
+            .map(|c| c.to_string())
+            .unwrap_or_else(|| "1".to_string());
 
         let replaced = trimmed
             .replace("{file}", &file_str)

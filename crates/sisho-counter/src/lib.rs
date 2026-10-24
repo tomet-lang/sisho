@@ -80,12 +80,8 @@ pub fn run(dir: PathBuf, extensions: Vec<ExtensionItem>) -> anyhow::Result<()> {
                             let source_path = model.dir.join(&link.source);
                             let line = link.at.map(|p| p.line);
                             let column = link.at.map(|p| p.column);
-                            let step = resolve_editor(
-                                &source_path,
-                                line,
-                                column,
-                                &model.extensions,
-                            );
+                            let step =
+                                resolve_editor(&source_path, line, column, &model.extensions);
                             screen.execute_handover(|| {
                                 let _ = step.run_inherited();
                             })?;

@@ -331,8 +331,7 @@ fn draw_checks(f: &mut Frame, area: Rect, model: &Model) {
                         Span::styled(
                             &outcome.name,
                             if is_selected {
-                                Style::default()
-                                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
+                                Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
                             } else {
                                 Style::default()
                             },
@@ -356,8 +355,7 @@ fn draw_checks(f: &mut Frame, area: Rect, model: &Model) {
                         Span::styled(
                             name,
                             if is_selected {
-                                Style::default()
-                                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
+                                Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED)
                             } else {
                                 Style::default()
                             },
@@ -539,7 +537,10 @@ fn draw_counter(f: &mut Frame, area: Rect, model: &Model) {
         match model.focused_pane {
             FocusedPane::BrokenLinks => {
                 if !model.broken_links().is_empty() {
-                    action_spans.push(Span::styled("[Enter/e]", Style::default().fg(Color::Yellow)));
+                    action_spans.push(Span::styled(
+                        "[Enter/e]",
+                        Style::default().fg(Color::Yellow),
+                    ));
                     action_spans.push(Span::raw(" Edit   "));
                 }
                 action_spans.push(Span::styled("[d]", Style::default().fg(Color::Cyan)));

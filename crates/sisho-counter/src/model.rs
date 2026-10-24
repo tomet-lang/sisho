@@ -368,4 +368,3 @@ impl Model {
         self.broken_links().get(self.selected_broken_link)
     }
 }
-

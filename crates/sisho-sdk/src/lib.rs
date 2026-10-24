@@ -8,7 +8,5 @@
 pub mod info;
 pub use jobserver_gate as jobserver;
 
-pub use info::{
-    CURRENT_SCHEMA_VERSION, Capabilities, EXTENSION_INFO_FLAG, ExtensionInfo,
-};
+pub use info::{CURRENT_SCHEMA_VERSION, Capabilities, EXTENSION_INFO_FLAG, ExtensionInfo};
 pub use jobserver::{JobServerGate, JobToken};

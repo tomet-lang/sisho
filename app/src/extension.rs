@@ -104,7 +104,9 @@ pub fn format_entries(
                         if info.word == entry.word {
                             let mut details = Vec::new();
                             if !info.version.is_empty() {
-                                let ver = if info.version.starts_with('v') || info.version.starts_with('V') {
+                                let ver = if info.version.starts_with('v')
+                                    || info.version.starts_with('V')
+                                {
                                     info.version.clone()
                                 } else {
                                     format!("v{}", info.version)
@@ -343,8 +345,10 @@ mod tests {
         caps.interactive = true;
         assert_eq!(format_capabilities(&caps), "tui, interactive");
 
-        caps.extra.insert("custom".to_string(), serde_json::json!(true));
-        caps.extra.insert("ignored".to_string(), serde_json::json!(false));
+        caps.extra
+            .insert("custom".to_string(), serde_json::json!(true));
+        caps.extra
+            .insert("ignored".to_string(), serde_json::json!(false));
         assert_eq!(format_capabilities(&caps), "tui, interactive, custom");
     }
 }
