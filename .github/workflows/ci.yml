@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  ci:
-    name: Build · Test · Docs
+  docs:
+    name: Docs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,15 +16,13 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
+      # Reads from Cachix only: this job builds the dev shell, which must not be pushed.
+      # The packages are built and pushed by nix-ci.yml.
       - name: Setup Cachix
         uses: cachix/cachix-action@v15
         with:
           name: tomet
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-
-      # The package runs the workspace tests itself (`doCheck = true`).
-      - name: Build sisho package
-        run: nix build .#sisho
+          skipPush: true
 
       - name: Check docs
         run: nix develop --command just docs-check

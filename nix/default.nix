@@ -36,6 +36,15 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         default = sisho;
         sisho = pkgs.callPackage ./pkgs/sisho.nix { inherit craneLib; };
 
+        # What CI builds and sends to Cachix (.github/workflows/nix-ci.yml). The tools below
+        # are built and cached by their own repositories.
+        ci = pkgs.linkFarm "ci" [
+          {
+            name = "sisho";
+            path = sisho;
+          }
+        ];
+
         # The tools, as their own flakes build them.
         inherit (tometPkgs) tomet tomet-lsp;
         inherit (twritPkgs) twrit;
