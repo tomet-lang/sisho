@@ -99,32 +99,30 @@ pub fn format_entries(
         match &entry.status {
             ExtensionStatus::Active => {
                 writeln!(out, "{:width$}  {}", entry.word, entry.path.display())?;
-                if verbose {
-                    if let Some(info) = query_info(&entry.path) {
-                        if info.word == entry.word {
-                            let mut details = Vec::new();
-                            if !info.version.is_empty() {
-                                let ver = if info.version.starts_with('v')
-                                    || info.version.starts_with('V')
-                                {
-                                    info.version.clone()
-                                } else {
-                                    format!("v{}", info.version)
-                                };
-                                details.push(ver);
-                            }
-                            if !info.about.is_empty() {
-                                details.push(info.about.clone());
-                            }
-                            let caps = format_capabilities(&info.capabilities);
-                            if !caps.is_empty() {
-                                details.push(format!("[{caps}]"));
-                            }
-                            if !details.is_empty() {
-                                let indent = " ".repeat(width + 2);
-                                writeln!(out, "{indent}{}", details.join("  "))?;
-                            }
-                        }
+                if verbose
+                    && let Some(info) = query_info(&entry.path)
+                    && info.word == entry.word
+                {
+                    let mut details = Vec::new();
+                    if !info.version.is_empty() {
+                        let ver = if info.version.starts_with('v') || info.version.starts_with('V')
+                        {
+                            info.version.clone()
+                        } else {
+                            format!("v{}", info.version)
+                        };
+                        details.push(ver);
+                    }
+                    if !info.about.is_empty() {
+                        details.push(info.about.clone());
+                    }
+                    let caps = format_capabilities(&info.capabilities);
+                    if !caps.is_empty() {
+                        details.push(format!("[{caps}]"));
+                    }
+                    if !details.is_empty() {
+                        let indent = " ".repeat(width + 2);
+                        writeln!(out, "{indent}{}", details.join("  "))?;
                     }
                 }
             }
