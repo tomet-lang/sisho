@@ -203,11 +203,11 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 ===[ catasto を足す ]
 
 - (2026-10-24、利用者と決めた。)fs-catasto(コマンドは `catasto`)を、sisho が知るツールに足す。語彙のような共有ファイルを置くのは catasto で、tomet と twrit はそれを読むだけ。置かれたものがずれても、これまでの `sisho check` は気づけなかった。
-- `check` に `catasto check` を足す。読み取りだけで、ネットワークに触れず、ずれがあれば 1 で終わる。`catasto.motm` がないリポジトリでは検査するものがなく、何も言わずに 0 で終わる。だから sisho は条件を持たない。「各ツールが自分で、見るものがあるかを決める」という上の原則のままで、`sisho-tools` に `std::fs` も入らない。最初に考えた「`catasto.motm` があるときだけ走らせる」案は、この原則に反するので捨てた。
+- `check` に `catasto check` を足す。読み取りだけで、ネットワークに触れず、ずれがあれば 1 で終わる。`catasto.ctmt` がないリポジトリでは検査するものがなく、何も言わずに 0 で終わる。だから sisho は条件を持たない。「各ツールが自分で、見るものがあるかを決める」という上の原則のままで、`sisho-tools` に `std::fs` も入らない。最初に考えた「`catasto.ctmt` があるときだけ走らせる」案は、この原則に反するので捨てた。
 - 最低の版は 0.1.0(`--version` を最初から返している)。`Tool::ALL` の最後に足し、報告の並びと既存の添字は動かさない。
 - `fix` に `catasto sync` は入れない(未決)。`sync` は、コミットがキャッシュにないときにネットワークへ出て、手で書き換えられた管理対象のファイルを、ロックの内容に戻す。`fix` が、人の手の入ったファイルを元に戻すことは、今までなかった。`--update` は `fix` に入れない。必要なときは `sisho catasto sync` で届く。
 - Nix では `toolchain` と dev shell に足す。入力は、`inputs.sisho.follows = ""` で切る(tomet・twrit と同じ)。fs-catasto の dev shell は sisho を入力に持つので、輪になるが、ロックの中で解ける。catasto の包みは、利用者の `PATH` の後ろに `git` を足すので、git が入っていない環境でも `catasto sync` が動く。
-- sisho 自身も、`writ` の語彙を catasto で取る(`catasto.motm` の `::upstreams`)。手でコピーしていた `writ.vocabulary.tmt` は、管理対象のファイルになる。
+- sisho 自身も、`writ` の語彙を catasto で取る(`catasto.ctmt` の `::upstreams`)。手でコピーしていた `writ.vocabulary.tmt` は、管理対象のファイルになる。
 
 ==[ 移すときに直す場所 ]
 
