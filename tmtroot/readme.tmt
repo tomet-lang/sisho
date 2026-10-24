@@ -34,6 +34,7 @@ sisho serve <file>         # a document as HTML over HTTP on 127.0.0.1, rendered
 sisho desk [path]          # interactive desk (extension): migrate Markdown, edit metadata, search structure
 sisho --list [--all]       # list installed extensions found on PATH (-l)
 sisho <tool> ...     # run a tool with the rest of the command line, unchanged
+sisho catasto <command>   # a shared file taken and kept where a manifest says (init, add, list, sync, ...)
 ```
 
 Both take `--json`, and `check` and `fix` take `--verbose` to show the output of steps that passed too. One failing step does not stop the others. A tool that is not installed counts as a failure.
@@ -58,6 +59,24 @@ When run with no arguments on an interactive terminal, `sisho` opens its own cou
 `sisho shelf ...` is the same pass-through to `tomet-shelf`, which builds and serves a site from a vault: `sisho shelf build`, `sisho shelf serve`. The word is the role and the program keeps its own name. `shelf` takes no part in `check` or `fix`.
 
 An extension is a program named `sisho-<word>` on `PATH`, run as `sisho <word> ...`. It is the same pass-through: `sisho` hands over the terminal, forwards all arguments and flags, and takes its exit code. Built-in commands and known tools always take precedence over an extension of the same name. An unknown word with no matching extension on `PATH` exits 2. `sisho --list` (or `-l`) lists all installed extensions found on `PATH`; with `--all`, duplicate programs that are shadowed by earlier entries in `PATH` are also shown. The contract is written down under @link(tmtroot/spec/cli/extension.tmt).
+
+==[ Taking a shared file ]
+
+A vocabulary, a schema, a license text: a file several repositories share and none of them should edit by hand. `catasto` keeps such files where `catasto.ctmt` says, each pinned to a commit and a SHA-256, and `sisho` runs it with the other tools. Through `sisho` the whole of it is:
+
+```bash
+sisho catasto init
+sisho catasto upstream add vocabularies https://github.com/tomet-lang/vocabularies.git --root vocabularies
+sisho catasto add tmtroot/schema/vocabularies/writ@1.0.0.vocabulary.tmt \
+    --upstream vocabularies writ/writ@1.0.0.vocabulary.tmt
+sisho check
+```
+
+`init` creates the manifest, `upstream add` names the repository, and `add` declares one file, fetches it and locks it; `sisho check` is green when it is as locked. Commit `catasto.ctmt`, `catasto.lock` and the file.
+
+Afterwards, `sisho check` fails when a managed file was edited, went missing or was never locked, and `catasto`'s own line under the failing step names the command (written there as `catasto sync`, which through `sisho` is `sisho catasto sync`): it puts the file back; `sisho catasto sync --update --only FILE` takes the newer version of one file, `sisho catasto list` shows what is managed and how each file stands, and `sisho catasto remove FILE` stops managing one. `sisho fix` leaves all of that alone, since `sync` can reach the network and restores a file someone may have been editing on purpose.
+
+`catasto` is the tool's own reference: `sisho catasto --help`, and the manifest syntax in its readme. `sisho` adds nothing to it and reads nothing from it but the exit code of `check`.
 
 ==[ With Nix ]
 
