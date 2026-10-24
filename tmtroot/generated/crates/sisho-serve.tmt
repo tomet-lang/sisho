@@ -1,6 +1,6 @@
-@kind(api)
+::kind(api)
 
-@meta{crate: sisho-serve, dependencies: list(sisho-vault), dependents: list(sisho-cli)}
+::meta{crate: sisho-serve, dependencies: list(sisho-vault), dependents: list(sisho-cli)}
 
 =[sisho-serve]
 

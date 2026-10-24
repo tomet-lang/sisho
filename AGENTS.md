@@ -48,16 +48,13 @@ The rules that follow from that memo:
 
 Read `CONTRIBUTING.md` for the contribution workflow, commit conventions, and verification steps.
 
-## Working against a local tomet
+## Changes in tomet
 
-The `tomet-*` crates are git dependencies, pinned by `Cargo.lock`. To try a change in the sibling `../tomet` checkout without a push, point the crates at it in `.cargo/config.toml`, which is gitignored:
+The `tomet-*` crates are git dependencies, pinned by `Cargo.lock`. A change in the sibling `../tomet` checkout reaches this repository by being pushed there, then taken with `cargo update -p <crate>`.
 
-```toml
-[patch."https://github.com/tomet-lang/tomet.git"]
-tomet-ast = { path = "../tomet/crates/tomet-syntax-ast" }
-```
+Never point the crates at a local checkout with `[patch]` in `.cargo/config.toml`. Cargo then writes the path into `Cargo.lock` and drops the `source` of the patched crate, which the Nix build cannot fetch.
 
-One line per crate you want to redirect; the path is the crate's directory, which is not always its package name. Nothing is committed by this. `tomet` is also pinned a second time, by `flake.lock`, for the `tomet` binary in the dev shell; the two pins are not checked against each other yet (see the design memo).
+`tomet` is also pinned a second time, by `flake.lock`, for the `tomet` binary in the dev shell (`nix flake update tomet`); the two pins are not checked against each other yet (see the design memo). Move them together.
 
 ## Language
 
