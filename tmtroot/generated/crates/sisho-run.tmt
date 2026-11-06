@@ -13,15 +13,15 @@ rule in the workspace `.writ.tmt`). It knows nothing about `tomet`,
 
 The pieces:
 
-- `Step` describes one command. [`Step::run`] runs it to completion and
+- `Step` describes one command. \[`Step::run`\] runs it to completion and
 
-captures its output; [`Step::run_inherited`] hands the terminal to it
+captures its output; \[`Step::run_inherited`\] hands the terminal to it
 instead, for a pass-through.
 
-- `Outcome` is what a step leaves behind, with a [`Status`] that tells
+- `Outcome` is what a step leaves behind, with a \[`Status`\] that tells
 
 apart a failure, a tool that is not installed, and a tool killed by a
-signal. Work that `sisho` does in-process produces the same [`Outcome`],
+signal. Work that `sisho` does in-process produces the same \[`Outcome`\],
 so a verb can mix both kinds.
 
 - `run_parallel` runs jobs on threads and returns their outcomes in the

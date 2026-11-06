@@ -9,8 +9,8 @@ Layer 0: SDK and protocol definitions for `sisho` extensions.
 An extension is an independent subprocess on `PATH` named `sisho-<word>`.
 This crate provides definitions and utilities for extension developers:
 
-- `info` disclosure protocol (`--sisho-extension-info`).:Metadata
-- `jobserver` Jobserver coordination via [`jobserver_gate`].:GNU
+- `info`: Metadata disclosure protocol (`--sisho-extension-info`).
+- `jobserver`: GNU Jobserver coordination via \[`jobserver_gate`\].
 
 ==[Module info]
 

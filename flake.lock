@@ -860,11 +860,11 @@
         "treefmt-nix": "treefmt-nix_6"
       },
       "locked": {
-        "lastModified": 1792838520,
-        "narHash": "sha256-lPnw3r0/A0V+HB95uwBe/Ek2tcde/n7IWAzuvPYmg3I=",
+        "lastModified": 1793993152,
+        "narHash": "sha256-WiwjZaSj/scaFxU0rQ1c9urR3g7amFzVCGyCWbFY5T4=",
         "owner": "tomet-lang",
         "repo": "twrit",
-        "rev": "212839177154d89f38dd2380a29c6a8769d9ffe3",
+        "rev": "f309669f4dfd8f719defddbdb27c7472073e7c1f",
         "type": "github"
       },
       "original": {
