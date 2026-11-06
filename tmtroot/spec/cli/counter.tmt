@@ -1,6 +1,4 @@
-::meta{
-  id: cli.counter
-}
+::id(cli.counter)
 
 `sisho`: when run with no arguments on an interactive terminal, opens the librarian's counter (`sisho-counter`).
 

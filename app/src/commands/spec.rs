@@ -95,9 +95,9 @@ fn write_or_check(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tomet_ast::{Block, Document};
+    use tomet_ast::{Block, File};
 
-    fn document() -> Document {
+    fn document() -> File {
         let mut root = Cli::command();
         root.build();
         tomet_spec::cli::document(&mut root, DOC_ID, NOTICE)
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn the_output_is_valid_tmt_and_deterministic() {
         let text = rendered();
-        tomet_parser::parse_document(&text).expect("the generated reference parses");
+        tomet_ast_parser::parse_file(&text).expect("the generated reference parses");
         assert_eq!(text, rendered());
     }
 
@@ -139,16 +139,16 @@ mod tests {
                         count(&s.blocks, sections, paragraphs);
                     }
                     Block::Paragraph(_) => *paragraphs += 1,
-                    Block::Element(_) | Block::List(_) => {}
+                    Block::Element(_) | Block::List(_) | Block::Hole(_) | Block::Interp(_) => {}
                 }
             }
         }
         let (mut want_s, mut want_p) = (0, 0);
-        count(&document().blocks, &mut want_s, &mut want_p);
+        count(&document().body, &mut want_s, &mut want_p);
 
-        let parsed = tomet_parser::parse_document(&rendered()).unwrap();
+        let parsed = tomet_ast_parser::parse_file(&rendered()).unwrap();
         let (mut got_s, mut got_p) = (0, 0);
-        count(&parsed.blocks, &mut got_s, &mut got_p);
+        count(&parsed.body, &mut got_s, &mut got_p);
         assert_eq!((got_s, got_p), (want_s, want_p));
     }
 }

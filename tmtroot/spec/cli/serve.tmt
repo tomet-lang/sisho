@@ -1,6 +1,4 @@
-::meta{
-  id: cli.serve
-}
+::id(cli.serve)
 
 `sisho serve <FILE>`: show a document as HTML over HTTP. It is for writing: edit, reload, look at the result.
 

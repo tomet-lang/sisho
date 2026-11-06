@@ -1,6 +1,4 @@
-::meta{
-  id: cli.extension
-}
+::id(cli.extension)
 
 `sisho <word> ...`: run an extension named `sisho-<word>` found on `PATH` with the rest of the command line.
 
