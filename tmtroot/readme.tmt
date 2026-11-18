@@ -3,11 +3,11 @@
   path: "README.md"
 )
 ::id(doc-readme)
-::meta{
+::meta(
   lang: en
-}
+)
 
-${macro.generated_by(self.path)}
+$macro.generated_by(self::path)
 
 =[ Sisho ]
 
@@ -24,15 +24,15 @@ The design memo is @link(tmtroot/dev/design.tmt).
 ==[ Usage ]
 
 ```bash
-sisho                # interactive counter dashboard (when run on a terminal with no arguments)
-sisho check [path]   # verify without writing; steps run at the same time
-sisho fix [path]     # regenerate, export, format; steps run one after another
-sisho convert <path|-> --to F | --from F   # one document, standard input or a directory, to or from Tomet (tomet converts)
-sisho serve <file>         # a document as HTML over HTTP on 127.0.0.1, rendered again per request
-sisho desk [path]          # interactive desk (extension): migrate Markdown, edit metadata, search structure
-sisho --list [--all]       # list installed extensions found on PATH (-l)
-sisho <tool> ...     # run a tool with the rest of the command line, unchanged
-sisho catasto <command>   # a shared file taken and kept where a manifest says (init, add, list, sync, ...)
+`` sisho                # interactive counter dashboard (when run on a terminal with no arguments)
+`` sisho check [path]   # verify without writing; steps run at the same time
+`` sisho fix [path]     # regenerate, export, format; steps run one after another
+`` sisho convert <path|-> --to F | --from F   # one document, standard input or a directory, to or from Tomet (tomet converts)
+`` sisho serve <file>         # a document as HTML over HTTP on 127.0.0.1, rendered again per request
+`` sisho desk [path]          # interactive desk (extension): migrate Markdown, edit metadata, search structure
+`` sisho --list [--all]       # list installed extensions found on PATH (-l)
+`` sisho <tool> ...     # run a tool with the rest of the command line, unchanged
+`` sisho catasto <command>   # a shared file taken and kept where a manifest says (init, add, list, sync, ...)
 ```
 
 Both take `--json`, and `check` and `fix` take `--verbose` to show the output of steps that passed too. One failing step does not stop the others. A tool that is not installed counts as a failure.
@@ -63,11 +63,11 @@ An extension is a program named `sisho-<word>` on `PATH`, run as `sisho <word> .
 A vocabulary, a schema, a license text: a file several repositories share and none of them should edit by hand. `catasto` keeps such files where `catasto.ctmt` says, each pinned to a commit and a SHA-256, and `sisho` runs it with the other tools. Through `sisho` the whole of it is:
 
 ```bash
-sisho catasto init
-sisho catasto upstream add vocabularies https://github.com/tomet-lang/vocabularies.git --root vocabularies
-sisho catasto add tmtroot/schema/vocabularies/writ@1.0.0.vocabulary.tmt \
-    --upstream vocabularies writ/writ@1.0.0.vocabulary.tmt
-sisho check
+`` sisho catasto init
+`` sisho catasto upstream add vocabularies https://github.com/tomet-lang/vocabularies.git --root vocabularies
+`` sisho catasto add tmtroot/schema/vocabularies/writ@1.0.0.vocabulary.tmt \
+``     --upstream vocabularies writ/writ@1.0.0.vocabulary.tmt
+`` sisho check
 ```
 
 `init` creates the manifest, `upstream add` names the repository, and `add` declares one file, fetches it and locks it; `sisho check` is green when it is as locked. Commit `catasto.ctmt`, `catasto.lock` and the file.
@@ -81,19 +81,19 @@ Afterwards, `sisho check` fails when a managed file was edited, went missing or 
 Nothing in `sisho` needs Nix: it finds `tomet` and `twrit` on `PATH`, however they got there. For those who do use Nix, the flake brings the tools, so a repository imports `sisho` and nothing else for them:
 
 ```nix
-inputs.sisho.url = "github:tomet-lang/sisho";
-
-# in a dev shell:
-packages = [ sisho.packages.${system}.toolchain ];   # sisho, tomet, twrit, catasto and sisho-desk
+`` inputs.sisho.url = "github:tomet-lang/sisho";
+``
+`` # in a dev shell:
+`` packages = [ sisho.packages.${system}.toolchain ];   # sisho, tomet, twrit, catasto and sisho-desk
 ```
 
 Packages are `sisho`, `tomet`, `tomet-lsp`, `twrit`, `catasto`, `tomet-shelf` and `sisho-desk`. `toolchain` bundles the core: `sisho`, `tomet`, `twrit`, `catasto` and `sisho-desk`. To choose your own set, as with fenix:
 
 ```nix
-sisho.legacyPackages.${system}.combine [
-  sisho.packages.${system}.toolchain
-  sisho.packages.${system}.tomet-shelf
-]
+`` sisho.legacyPackages.${system}.combine [
+``   sisho.packages.${system}.toolchain
+``   sisho.packages.${system}.tomet-shelf
+`` ]
 ```
 
 Each tool is built as its own flake builds it, so the binary cache of `tomet` serves them. The versions that go together are the ones `sisho`'s `flake.lock` pins; `nix flake update sisho` moves them all at once.
@@ -109,11 +109,13 @@ Each tool is built as its own flake builds it, so the binary cache of `tomet` se
 ==[ Building and Testing ]
 
 === Build workspace
+
 ```bash
-cargo build
+`` cargo build
 ```
 
 === Run tests
+
 ```bash
-cargo test --workspace
+`` cargo test --workspace
 ```

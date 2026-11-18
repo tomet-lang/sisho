@@ -8,33 +8,29 @@ members = [
   "crates/sisho-serve",
   "crates/sisho-sdk",
 ]
-
 default-members = ["app"]
 
 [workspace.package]
-version = "0.1.0"
-edition = "2024"
+version      = "0.1.0"
+edition      = "2024"
 rust-version = "1.85"
-license = "MIT OR Apache-2.0"
+license      = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
-sisho-cli = { path = "app" }
+sisho-cli     = { path = "app" }
 sisho-counter = { path = "crates/sisho-counter" }
-sisho-run = { path = "crates/sisho-run" }
-sisho-tools = { path = "crates/sisho-tools" }
-sisho-serve = { path = "crates/sisho-serve" }
-sisho-sdk = { path = "crates/sisho-sdk" }
-
-#= Tomet -- internal crates, as twrit takes them; the facade is not for apps
-tomet-ast = { git = "https://github.com/tomet-lang/tomet.git" }
-tomet-ast-parser = { git = "https://github.com/tomet-lang/tomet.git" }
+sisho-run     = { path = "crates/sisho-run" }
+sisho-tools   = { path = "crates/sisho-tools" }
+sisho-serve   = { path = "crates/sisho-serve" }
+sisho-sdk     = { path = "crates/sisho-sdk" }
+#--- Tomet ---
+tomet-ast         = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-ast-parser  = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-load-config = { git = "https://github.com/tomet-lang/tomet.git" }
-tomet-spec = { git = "https://github.com/tomet-lang/tomet.git" }
-
-#= Concurrency
+tomet-spec        = { git = "https://github.com/tomet-lang/tomet.git" }
+#---
 jobserver-gate = { git = "https://github.com/tomet-lang/jobserver-gate.git" }
-
-#= Crates.io
+#--- Crates.io ---
 anyhow = "1"
 axum = { version = "0.8", default-features = false, features = [
   "http1",
@@ -50,11 +46,11 @@ serde_json = { version = "1", features = ["preserve_order"] }
 tokio = { version = "1", features = ["rt-multi-thread", "net"] }
 
 [profile.release]
-opt-level = 3
-lto = "fat"
+opt-level     = 3
+lto           = "fat"
 codegen-units = 1
-panic = "abort"
-strip = true
+panic         = "abort"
+strip         = true
 
 [profile.dev.package."*"]
 opt-level = 3

@@ -1,10 +1,10 @@
 [package]
-name = "sisho-cli"
+name              = "sisho-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Orchestrator CLI for the Tomet ecosystem (tomet, twrit, tandr)."
-publish = false
+description       = "Orchestrator CLI for the Tomet ecosystem (tomet, twrit, tandr)."
+publish           = false
 
 [[bin]]
 name = "sisho"
@@ -12,26 +12,24 @@ path = "src/main.rs"
 
 [features]
 default = ["tui"]
-tui = ["dep:sisho-counter"]
+tui     = ["dep:sisho-counter"]
 
 [dependencies]
 sisho-counter = { workspace = true, optional = true }
-sisho-run = { workspace = true }
-sisho-sdk = { workspace = true }
-sisho-serve = { workspace = true }
-sisho-tools = { workspace = true }
-
-#= Tomet
+sisho-run     = { workspace = true }
+sisho-sdk     = { workspace = true }
+sisho-serve   = { workspace = true }
+sisho-tools   = { workspace = true }
+#--- Tomet ---
 tomet-load-config = { workspace = true }
-tomet-spec = { workspace = true }
-
-#= Crates.io
-anyhow = { workspace = true }
-clap = { workspace = true }
-jobserver = { workspace = true }
-mimalloc = { workspace = true }
+tomet-spec        = { workspace = true }
+#--- Crates.io ---
+anyhow     = { workspace = true }
+clap       = { workspace = true }
+jobserver  = { workspace = true }
+mimalloc   = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
-tomet-ast = { workspace = true }
+tomet-ast        = { workspace = true }
 tomet-ast-parser = { workspace = true }

@@ -1,6 +1,6 @@
 ::kind(api)
 
-::meta{crate: sisho-sdk, dependencies: list(), dependents: list(sisho-cli)}
+::meta(crate: sisho-sdk, dependencies: (), dependents: (sisho-cli))
 
 =[sisho-sdk]
 

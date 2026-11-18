@@ -1,10 +1,10 @@
 [package]
-name = "sisho-run"
+name              = "sisho-run"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Run external commands and collect their outcomes for sisho."
-publish = false
+description       = "Run external commands and collect their outcomes for sisho."
+publish           = false
 
 [dependencies]
 jobserver = { workspace = true }

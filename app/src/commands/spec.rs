@@ -139,7 +139,11 @@ mod tests {
                         count(&s.blocks, sections, paragraphs);
                     }
                     Block::Paragraph(_) => *paragraphs += 1,
-                    Block::Element(_) | Block::List(_) | Block::Hole(_) | Block::Interp(_) => {}
+                    Block::Element(_)
+                    | Block::List(_)
+                    | Block::Hole(_)
+                    | Block::Interp(_)
+                    | Block::TypeSeat(_) => {}
                 }
             }
         }

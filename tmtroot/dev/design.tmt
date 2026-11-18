@@ -167,19 +167,19 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
        - `q`: 終了。
   3. 画面スケッチ:
 ```text
-┌─ Board (Project Status) ──────────────────────────────────────────────────┐
-│ Tools & Extensions                    │ Integrity & Checks                │
-│  ✓ tomet 0.2.0 (fine)                │  ✓ twrit check (0.09s)            │
-│  ✓ twrit 0.2.0 (fine)                │  ✓ tomet check (0.01s)            │
-│  - tandr (not installed)              │  ✗ tomet format (failed)          │
-│  • desk: ~/.nix-profile/...          │  ✓ tomet export (0.01s)           │
-│                                       │                                   │
-│ Broken Links (0 cached)               │ Step Output Preview               │
-│  (no broken links found)              │  Diff in docs/spec.tmt:42         │
-├───────────────────────────────────────────────────────────────────────────┤
-│ Counter (Actions)                                                         │
-│  [c] Check   [f] Fix (ask)   [l] Check Links   [d] Open Desk   [q] Quit   │
-└───────────────────────────────────────────────────────────────────────────┘
+`` ┌─ Board (Project Status) ──────────────────────────────────────────────────┐
+`` │ Tools & Extensions                    │ Integrity & Checks                │
+`` │  ✓ tomet 0.2.0 (fine)                │  ✓ twrit check (0.09s)            │
+`` │  ✓ twrit 0.2.0 (fine)                │  ✓ tomet check (0.01s)            │
+`` │  - tandr (not installed)              │  ✗ tomet format (failed)          │
+`` │  • desk: ~/.nix-profile/...          │  ✓ tomet export (0.01s)           │
+`` │                                       │                                   │
+`` │ Broken Links (0 cached)               │ Step Output Preview               │
+`` │  (no broken links found)              │  Diff in docs/spec.tmt:42         │
+`` ├───────────────────────────────────────────────────────────────────────────┤
+`` │ Counter (Actions)                                                         │
+`` │  [c] Check   [f] Fix (ask)   [l] Check Links   [d] Open Desk   [q] Quit   │
+`` └───────────────────────────────────────────────────────────────────────────┘
 ```
   4. 非 TTY での挙動: 標準入力または標準出力が端末でない場合(パイプやスクリプト)は画面を開かず、従来通りヘルプを表示して終了する。既存のスクリプトを壊さない。
   5. 端末の復帰: 正常終了、エラー、パニック(panic hook)のいずれでも raw モードと代替画面を確実に復帰する RAII ガードを設ける。

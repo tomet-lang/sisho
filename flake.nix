@@ -33,18 +33,21 @@
       url = "github:tomet-lang/tomet";
       inputs.twrit.follows = "";
       inputs.tomet-shelf.follows = "";
+      inputs.catasto.follows = "";
       inputs.sisho.follows = "";
     };
     twrit = {
       url = "github:tomet-lang/twrit";
       inputs.tomet.follows = "";
       inputs.tomet-shelf.follows = "";
+      inputs.catasto.follows = "";
       inputs.sisho.follows = "";
     };
     tomet-shelf = {
       url = "github:tomet-lang/tomet-shelf";
       inputs.tomet.follows = "";
       inputs.twrit.follows = "";
+      inputs.catasto.follows = "";
       inputs.sisho.follows = "";
     };
     sisho-desk = {
@@ -52,9 +55,13 @@
       inputs.tomet.follows = "";
       inputs.twrit.follows = "";
       inputs.catasto.follows = "";
+      inputs.sisho.follows = "";
     };
     catasto = {
       url = "github:tomet-lang/fs-catasto";
+      inputs.tomet.follows = "";
+      inputs.twrit.follows = "";
+      inputs.tomet-shelf.follows = "";
       inputs.sisho.follows = "";
     };
   };

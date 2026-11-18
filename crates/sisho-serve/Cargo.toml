@@ -1,19 +1,18 @@
 [package]
-name = "sisho-serve"
+name              = "sisho-serve"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Serve a .tmt document over HTTP for sisho."
-publish = false
+description       = "Serve a .tmt document over HTTP for sisho."
+publish           = false
 
 [dependencies]
-sisho-run = { workspace = true }
+sisho-run   = { workspace = true }
 sisho-tools = { workspace = true }
-
-#= Crates.io
+#--- Crates.io ---
 anyhow = { workspace = true }
-axum = { workspace = true }
-tokio = { workspace = true }
+axum   = { workspace = true }
+tokio  = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["io-util", "macros"] }

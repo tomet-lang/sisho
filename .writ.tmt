@@ -15,13 +15,13 @@ does not relax the rule to fit the change it wanted to make.
 ==[ crate-layering ]
 
 @rule(crate-layering){
-  guard: { twrit: layers }
+  guard: (twrit: layers)
 
-  layers: {
-    2: list( "app" )
-    1: list( "crates/sisho-tools", "crates/sisho-serve", "crates/sisho-counter" )
-    0: list( "crates/sisho-run", "crates/sisho-sdk" )
-  }
+  layers: (
+    2: ("app")
+    1: ("crates/sisho-tools", "crates/sisho-serve", "crates/sisho-counter")
+    0: ("crates/sisho-run", "crates/sisho-sdk")
+  )
 }
 
 Every workspace member belongs to exactly one layer, and depends only on
@@ -48,13 +48,13 @@ the first sign that a layer has started to know what it should not.
 ==[ tools-by-subprocess ]
 
 @rule(tools-by-subprocess){
-  guard: { twrit: pure }
+  guard: (twrit: pure)
 
-  pure: {
-    crates: [ "crates/sisho-run", "crates/sisho-tools" ]
-    forbid: [ "std::fs", "std::net" ]
-    allow-external: list( "jobserver", "libc", "getrandom", "cfg-if", "r-efi" )
-  }
+  pure: (
+    crates:         ("crates/sisho-run", "crates/sisho-tools")
+    forbid:         ("std::fs", "std::net")
+    allow-external: ("jobserver", "libc", "getrandom", "cfg-if", "r-efi")
+  )
 }
 
 `tomet`, `twrit` and `tandr` are called as subprocesses, never linked as
@@ -78,13 +78,13 @@ tools as one set.
 ==[ process-door ]
 
 @rule(process-door){
-  guard: { twrit: door }
+  guard: (twrit: door)
 
-  door: {
-    names: list( "std::process" )
-    within: list( "crates/*" )
-    allowed: list( "crates/sisho-run" )
-  }
+  door: (
+    names:   ("std::process")
+    within:  ("crates/*")
+    allowed: ("crates/sisho-run")
+  )
 }
 
 A library crate starts a process only if it is named above. Programs are
@@ -100,7 +100,7 @@ failure, and it shows up here rather than in review.
 ==[ tmtroot-output-not-edited ]
 
 @rule(tmtroot-output-not-edited){
-  guard: { runs: "just docs-check" }
+  guard: (runs: "just docs-check")
 }
 
 A file exported from @dir(tmtroot/) is generated. Do not hand-edit it. Edit
@@ -109,11 +109,11 @@ the source and re-export.
 ==[ rust-api-docs ]
 
 @rule(rust-api-docs){
-  guard: { twrit: rust-api }
+  guard: (twrit: rust-api)
 
-  rust_api: {
+  rust_api: (
     out: "tmtroot/generated/crates"
-  }
+  )
 }
 
 API documentation for all workspace Rust crates must be kept up to date
