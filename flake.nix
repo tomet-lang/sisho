@@ -14,7 +14,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    #= Rust
+    # --- Rust ---
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -23,12 +23,7 @@
       url = "github:ipetkov/crane";
     };
 
-    #= Tools
-    # What sisho brings, so that a repository imports sisho and nothing else. Each tool keeps its
-    # own nixpkgs, crane and fenix, so it builds exactly as its own flake does and the binary
-    # cache keeps hitting. Only the inputs that serve the tool's own development are cut here:
-    # the other tools (which would unroll the tomet / twrit / tomet-shelf cycle into copies
-    # in the lock) and nothing else.
+    # --- Tools ---
     tomet = {
       url = "github:tomet-lang/tomet";
       inputs.twrit.follows = "";
