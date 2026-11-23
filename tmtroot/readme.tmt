@@ -64,7 +64,7 @@ A vocabulary, a schema, a license text: a file several repositories share and no
 ```bash
 `` sisho catasto init
 `` sisho catasto upstream add vocabularies https://github.com/tomet-lang/vocabularies.git --root vocabularies
-`` sisho catasto add tmtroot/schema/vocabularies/writ@1.0.0.vocabulary.tmt \
+`` sisho catasto add tmtroot/schema/writ@1.0.0.vocabulary.tmt \
 ``     --upstream vocabularies writ/writ@1.0.0.vocabulary.tmt
 `` sisho check
 ```
