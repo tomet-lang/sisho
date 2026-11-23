@@ -39,7 +39,7 @@ impl Tool {
     /// whose conversion commands take a directory, `-` and `--dry-run` alike,
     /// which `sisho convert` leaves to them, and 0.5.0 the first with
     /// `check-links` since it came back from `sisho`, and its `--json`, which
-    /// the counter reads.
+    /// `sisho-board` reads.
     pub const fn min_version(self) -> Version {
         match self {
             Tool::Tomet => Version::new(0, 5, 0),

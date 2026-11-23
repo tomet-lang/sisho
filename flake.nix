@@ -45,6 +45,13 @@
       inputs.catasto.follows = "";
       inputs.sisho.follows = "";
     };
+    sisho-board = {
+      url = "github:tomet-lang/sisho-board";
+      inputs.tomet.follows = "";
+      inputs.twrit.follows = "";
+      inputs.catasto.follows = "";
+      inputs.sisho.follows = "";
+    };
     sisho-desk = {
       url = "github:tomet-lang/sisho-desk";
       inputs.tomet.follows = "";

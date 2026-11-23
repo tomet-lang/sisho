@@ -216,8 +216,8 @@ mod versions {
     }
 
     /// `sisho convert` leaves directories, `-` and `--dry-run` to `tomet`,
-    /// which does all of that for every conversion from 0.4.0 on, and the
-    /// counter reads `tomet check-links --json`, which 0.5.0 brought back.
+    /// which does all of that for every conversion from 0.4.0 on, and
+    /// `sisho-board` reads `tomet check-links --json`, which 0.5.0 brought back.
     #[test]
     fn tomet_needs_the_version_with_check_links_and_conversions_that_take_every_input() {
         assert_eq!(Tool::Tomet.min_version(), v(0, 5, 0));

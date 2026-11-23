@@ -19,7 +19,7 @@ does not relax the rule to fit the change it wanted to make.
 
   layers: (
     2: ("app")
-    1: ("crates/sisho-tools", "crates/sisho-serve", "crates/sisho-counter")
+    1: ("crates/sisho-tools", "crates/sisho-serve")
     0: ("crates/sisho-run", "crates/sisho-sdk")
   )
 }
@@ -31,11 +31,10 @@ upward ones are not.
 Layer 0 runs commands and knows no tool by name (`sisho-run`), and provides
 the extension SDK protocol types (`sisho-sdk`). Layer 1 holds what `sisho`
 knows about the core tools (`sisho-tools`) and what it implements itself
-(`sisho-serve`, `sisho-counter`). Layer 2 is the program.
+(`sisho-serve`). Layer 2 is the program.
 
 `sisho-serve` is its own crate so that the HTTP stack stays out of the
-build of every other command. `sisho-counter` is its own crate so that
-the TUI stack stays out of the core CLI build.
+build of every other command.
 
 Dev-dependencies are exempt.
 
@@ -65,8 +64,7 @@ a `jobserver` update may change the list.
 
 Only what `sisho` implements itself -- `sisho spec` in `app` -- uses the
 `tomet` crates, through git dependencies. Conversion and the link check are
-not among them: `sisho convert`, `sisho-serve` and `sisho-counter` call the
-`tomet` binary.
+not among them: `sisho convert` and `sisho-serve` call the `tomet` binary.
 
 ---[ Why ]---
 

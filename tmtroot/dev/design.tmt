@@ -54,7 +54,7 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
   -. 実装の配置: `commands/` のサブコマンドではなく、拡張機能の知識（探索、一覧、単語判定）を持つ独立モジュール `app/src/extension.rs` に集約する。探索関数 `scan()` は `self-tui` からも直接利用できる。`sisho-tools` は `tools-by-subprocess`（`std::fs` 不可）であり、新 crate 追加による `.writ.tmt` 変更を避けるため `app` 内に配置した。
 - (2026-10-21 決定) 拡張開発者向け補助 SDK (`sisho-sdk`) の新設とプロトコル策定。
   -. 位置づけ: 拡張コマンド (`sisho-<word>`) は独立子プロセスであり、プロトコル（CLI 引数、終了コード、JSON）は言語非依存。`sisho-sdk` は必須のフレームワークではなく、Rust で拡張を書く開発者が定型処理（メタデータ開示や jobserver 連携）を安全に実装するためのオプショナルな補助 SDK（`cargo-metadata` や `clap-cargo` と同様の位置づけ）。
-  -. メタデータ開示: `--sisho-extension-info` を受け取った拡張は、バージョンや説明文 (`about`)、機能 (`capabilities`) を単一の JSON オブジェクトとして標準出力に出して終了コード 0 で終わる。`sisho --list` やダッシュボード (`sisho-counter`) での豊かな情報表示に使う。
+  -. メタデータ開示: `--sisho-extension-info` を受け取った拡張は、バージョンや説明文 (`about`)、機能 (`capabilities`) を単一の JSON オブジェクトとして標準出力に出して終了コード 0 で終わる。`sisho --list` やダッシュボード (`sisho-board`) での豊かな情報表示に使う。
   -. 並列実行・jobserver 連携: `sisho` が子プロセス起動時に引き渡す GNU jobserver の環境変数と記述子を、拡張側で安全に解釈・参加するためのヘルパーを提供する。
   -. クレート配置: レイヤー 0 (`crates/sisho-sdk`)。`sisho` の内部ランタイム (`sisho-run` や `sisho-vault`) に一切依存せず、純粋なプロトコル型と最小限のヘルパー（`serde`, `serde_json`, `jobserver`）のみを持つ。
 
@@ -120,8 +120,8 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
   -. sisho に置いた理由は、2 つとも崩れていた。tomet の CLI が重い(axum・tokio・TUI)というのは、`serve` と `tui` が出て消えた。走査とキャッシュはエコシステムの話、というのは、sisho が自前の宣言を持たず(vault の宣言は tomet の `@config`)、キャッシュも `~/.cache/tomet/` の tomet のものだったので、成り立たなかった。
   -. sisho は、`sisho spec` を除いて、tomet の crate を取り込まなくなった。コア 3 つは子プロセスで呼ぶ、という原則の例外がなくなり、`sisho-vault` は消えた。
   -. 契約は `--json` の 1 つの JSON オブジェクト。`files_scanned`・`links_checked`・`broken`(`source`・`target`・`line`・`column`。位置が分からなければ `null`)・`errors`(`source`・`error`)。形は sisho が持っていたものと同じで、出力は 1 バイトも違わない。仕様は tomet の `spec/cli/check-links.tmt`。
-  -. 終了コードは、切れたリンクか読めなかった文書があれば 1(標準出力には JSON が出る)。調べること自体ができなかったときも 1 だが、標準出力は空で、標準エラーに理由が出る。counter はこの違いで、報告と失敗を分ける。
-  -. counter(`l`)は `tomet check-links --json` を `Step` で実行して読む。型は counter が持つ。tomet が無ければ「tomet is not on PATH」を Board に出す。
+  -. 終了コードは、切れたリンクか読めなかった文書があれば 1(標準出力には JSON が出る)。調べること自体ができなかったときも 1 だが、標準出力は空で、標準エラーに理由が出る。board はこの違いで、報告と失敗を分ける。
+  -. board(`l`)は `tomet check-links --json` を `Step` で実行して読む。型は board が持つ。tomet が無ければ「tomet is not on PATH」を Board に出す。
   -. tomet の最低の版は 0.5.0(`check-links` が戻った版)。
   -. `sisho check` に入れる条件は変わらない。tomet の切れたリンクを片付けてから(2026-10-24 の実測: tomet が 90 件、twrit が 2 件、sisho が 0 件。tomet の多くは旧 `docs/` への参照)。
 - コードの置き場(2026-10-18 に合意)。コマンドは bin crate(`apps/cli/src/commands/*.rs`)の中にあり、テストも同居しているので、lib としては依存できない。引数の解釈・走査・出力という糊の部分(`export` 約 470 行、`check_links` 約 160 行、`serve` 約 60 行、共通の `util` 約 100 行)をテストごと sisho に移す。(`new` と `refactor` も一度は移したが、tomet に残すと決めたので外した。)実際の処理を持つ lib(`tomet-links`・`tomet-html`・`tomet-semantics`・`tomet-workspace` など)は tomet に残る。
@@ -152,40 +152,15 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - `serve`(2026-10-18): 1 文書を HTML で、127.0.0.1 の HTTP で返し、リクエストのたびに読み直して描画する。描画は `convert --to html` と同じ関数なので、見えるものが `convert` の書くものと同じ(2026-10-24 から、どちらも `tomet html` を呼ぶ)。tomet の `serve` とページがバイト単位で一致することを確かめた。意図した差は 2 つ: 描画できない文書は HTTP 500 のエラーページ(tomet は 200)、描画とファイルの読み込みはブロッキング用のスレッドで行う。`--port 0` で空いているポートを使える。
 - `tui`(2026-10-18): `apps/tui`(3,747 行、16 ファイル)を、構成を変えずに `sisho-tui` へ移した(`app/` 状態、`engine/`、`ui/` 描画)。構造ペインは `tomet-transform` を使っていて、tandr ができたときに作り直す領域なので、今は触らない。変えたのは端末の復帰だけ: 元の `run_tui` は、読み込み中の `?` による早期 return で、raw モードと代替画面を戻さなかった。いまは破棄時に必ず戻す `Screen` のガードと、パニック時のフックがある。元のバグは、コードを読んで見つけたもので、実機では再現できていない(読み込み中のエラーは、スキャンのスレッドがパニックした場合にしか通らない)。同じ vault で `tomet tui` と `sisho tui` を仮想端末(tmux)に出し、起動画面と 9 回のキー操作のあとの画面、計 10 画面を比べて、すべて一致した。テストは移した 7 本に、`TestBackend` で描画を確かめる 7 本を足した。
 - `tui` の切り出し(2026-10-20): `sisho tui` を独立したリポジトリ `sisho-desk` (呼ぶ語は `desk`) へ移出した。文書を直接編集・移行する作業台は、オーケストレータ本体の責務というよりはエコシステムを補佐する道具であり、拡張機構 (`sisho-<word>`) の第一号リファレンス実装として最適だったため。`sisho` からは `crates/sisho-tui`、`commands/tui.rs`、`ratatui` や `crossterm` 等の依存をすべて撤去した。
-- 司書の窓口: `sisho-counter` (2026-10-20 決定): 引数なしの `sisho` を叩いた時に起動する、`sisho` 自身の対話画面。
-  1. 位置づけと責務: `sisho` そのものの状態管理・操作を行う窓口。文書編集・移行は行わない(`sisho-desk` の責務)。
-  2. 二層設計: 「Board は情報表示、Counter は実行選択」。
-     - Board (掲示領域・上部〜中央): プロジェクトの現在の健全性とツールの状態を俯瞰する静的な情報表示。
-       - Tools & Extensions: コアツールの存在・版・適合判定 (`sisho-tools`)、および PATH 上の拡張一覧 (`sisho-counter` に渡されたデータ)。
-       - Checks & Integrity: `check` の各ステップの合否、所要時間、選択されたステップの標準出力/エラー出力プレビュー。
-       - Broken Links: `tomet check-links --json` で得られた壊れたリンク一覧。counter が子プロセスとして実行し、JSON を読む(2026-10-24 から。それまでは `sisho-vault` をプロセス内で呼んでいた)。
-     - Counter (受付領域・下部): 司書への仕事の依頼・実行選択。
-       - `c`: `check` の再実行。
-       - `f`: `fix` の実行。ファイルを書き換えるため `Apply fixes? [y/N]` の確認プロンプトを Counter に表示。
-       - `l`: リンクの検査(`tomet check-links --json`)の再実行。
-       - `d`: 拡張 `sisho-desk` の起動(端末を引き渡し、終了後に復帰)。
-       - `q`: 終了。
-  3. 画面スケッチ:
-```text
-`` ┌─ Board (Project Status) ──────────────────────────────────────────────────┐
-`` │ Tools & Extensions                    │ Integrity & Checks                │
-`` │  ✓ tomet 0.2.0 (fine)                │  ✓ twrit check (0.09s)            │
-`` │  ✓ twrit 0.2.0 (fine)                │  ✓ tomet check (0.01s)            │
-`` │  - tandr (not installed)              │  ✗ tomet format (failed)          │
-`` │  • desk: ~/.nix-profile/...          │  ✓ tomet export (0.01s)           │
-`` │                                       │                                   │
-`` │ Broken Links (0 cached)               │ Step Output Preview               │
-`` │  (no broken links found)              │  Diff in docs/spec.tmt:42         │
-`` ├───────────────────────────────────────────────────────────────────────────┤
-`` │ Counter (Actions)                                                         │
-`` │  [c] Check   [f] Fix (ask)   [l] Check Links   [d] Open Desk   [q] Quit   │
-`` └───────────────────────────────────────────────────────────────────────────┘
-```
-  4. 非 TTY での挙動: 標準入力または標準出力が端末でない場合(パイプやスクリプト)は画面を開かず、従来通りヘルプを表示して終了する。既存のスクリプトを壊さない。
-  5. 端末の復帰: 正常終了、エラー、パニック(panic hook)のいずれでも raw モードと代替画面を確実に復帰する RAII ガードを設ける。
-  6. クレートとレイヤー: `crates/sisho-counter` として Layer 1 に新設する。`sisho-serve` と同様に TUI スタック (`ratatui`, `crossterm`) をコアから隔離する。`app` の Cargo feature `tui` (デフォルト有効) で切り離す。
-  7. プロセス起動: `sisho-counter` 自身は `std::process` を一切使わず、ステップの実行はすべて Layer 0 の `sisho-run` (`Step`, `Outcome`) を通す。したがって `process-door` の例外追加は不要。
-  8. `.writ.tmt` の更新: Layer 1 の一覧に `crates/sisho-counter` を追加する(作者のみが編集)。
+- 司書の窓口: `sisho-board` (旧 `sisho-counter`、2026-10-20 決定、のちに独立拡張リポジトリ `sisho-board` へ分離):
+  1. 位置づけと分離の決定: `sisho` 本体は設定ファイルも TUI 依存 (`ratatui`, `crossterm`) も一切持たない純粋・ステートレスなオーケストレータに徹する。対話ダッシュボード (`sisho-board`) とその拡張ペイン SDK (`sisho-board-sdk`) は、`sisho-desk` と同様に独立したリポジトリ `sisho-board` へ切り出す。
+  2. 起動と特例排除:
+     - `sisho` 本体は `"board"` という語に関するいかなる特別扱いも持たない。
+     - `sisho board [path]`: `sisho desk` と同じく、通常の拡張機構 (`sisho-<word>`) として `PATH` 上の `sisho-board` を明示的に起動する。
+     - 引数なしの `sisho`: `sisho-board` を暗黙には起動せず、端末の有無にかかわらず常にヘルプを表示して終了コード 2 で終わる。
+  3. 責務の境界:
+     - `sisho` 本体 (`sisho-sdk`) は `--sisho-extension-info` と jobserver 連携のみを持つ。
+     - ボード固有のプロトコル (`--sisho-board-pane`, `BoardPane` 等) や信頼設定 (`~/.config/sisho/board.json`) はすべて `sisho-board` リポジトリ側が所有する。これにより「`sisho` 本体は独自の設定ファイルやマニフェストを持たない」という原則を完全に守る。
 - `--advanced`・`--lang`・`--body` は `--to html` のときだけ。ほかの形式に付けると使い方の誤りで、終了コード 2。
 - 描画の糊(パースと準備、各形式への描画)は `sisho-vault` の `render` に 1 か所だけ置き、`export` と `convert` が共有する。`serve` は `convert` の関数を通して使う。
 
@@ -207,7 +182,7 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - 3 つのツールのロックを、最新の sisho へ作り直す必要はなく、作り直しても落ち着く点がない(一方を進めると、もう一方の固定が古くなる)。各リポジトリは、固定している版の sisho を使う。
 - twrit の AGENTS.md にあった「tomet の flake が twrit を、twrit の flake が tomet を取り込む」という説明は、sisho 経由に書き直した。
 - `github:tomet-lang/tomet-writ`(twrit の旧名)を指していた入力は、この切り替えでなくなった。
-- (2026-10-20、利用者と決めた。)初期の TUI (`sisho tui`) を独立リポジトリ `sisho-desk` (`sisho desk`) へ切り出したことに伴い、`toolchain` に `sisho-desk` を加えた (`sisho`・`tomet`・`twrit`・`sisho-desk` の 4 つ)。初心者が `sisho desk` と叩いたときに別のパッケージの追加なしで届くようにするため。`sisho-desk` の flake 入力のうち開発用ツール (`tomet` と `twrit`) は、sisho の側で `inputs.tomet.follows = ""`・`inputs.twrit.follows = ""` として切る。nixpkgs・crane・fenix は自前のものを保ち、バイナリキャッシュを活かす。
+- (2026-10-20、利用者と決めた。)初期の TUI (`sisho tui`) を独立リポジトリ `sisho-desk` (`sisho desk`) へ切り出したことに伴い、`toolchain` に `sisho-desk` を加えた。同様に、独立リポジトリへ切り出した `sisho-board` (`sisho board`) も `packages`・`toolchain`・dev shell に加える。初心者が `sisho board` や `sisho desk` と叩いたときに別のパッケージの追加なしで届くようにするため。`sisho-board` と `sisho-desk` の flake 入力のうち開発用ツール (`tomet`・`twrit`・`catasto`・`sisho`) は、sisho の側で `follows = ""` として切る。nixpkgs・crane・fenix は自前のものを保ち、バイナリキャッシュを活かす。
 
 ===[ catasto を足す ]
 

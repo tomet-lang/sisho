@@ -1,7 +1,7 @@
 # Sisho development tasks.
 
 # Tools in the Tomet ecosystem pinned as flake inputs.
-tool_inputs := "catasto sisho-desk tomet tomet-shelf twrit"
+tool_inputs := "catasto sisho-board sisho-desk tomet tomet-shelf twrit"
 
 default:
     @just --list

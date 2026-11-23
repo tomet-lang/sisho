@@ -6,6 +6,7 @@
   tomet-lsp,
   twrit,
   catasto,
+  sisho-board,
   sisho-desk,
   ...
 }:
@@ -27,6 +28,7 @@ mkShell {
     tomet-lsp
     twrit
     catasto
+    sisho-board
     sisho-desk
     just
 

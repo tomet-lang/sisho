@@ -20,6 +20,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
       tometPkgs = inputs.tomet.packages.${system};
       twritPkgs = inputs.twrit.packages.${system};
       shelfPkgs = inputs.tomet-shelf.packages.${system};
+      boardPkgs = inputs.sisho-board.packages.${system};
       deskPkgs = inputs.sisho-desk.packages.${system};
       catastoPkgs = inputs.catasto.packages.${system};
 
@@ -54,6 +55,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         inherit (twritPkgs) twrit;
         inherit (shelfPkgs) tomet-shelf;
         inherit (catastoPkgs) catasto;
+        inherit (boardPkgs) sisho-board;
         inherit (deskPkgs) sisho-desk;
 
         # The core: what `sisho check` and `sisho fix` run. Add the rest with `combine`.
@@ -62,6 +64,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
           tomet
           twrit
           catasto
+          sisho-board
           sisho-desk
         ];
       };
@@ -75,6 +78,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         inherit (tometPkgs) tomet tomet-lsp;
         inherit (twritPkgs) twrit;
         inherit (catastoPkgs) catasto;
+        inherit (boardPkgs) sisho-board;
         inherit (deskPkgs) sisho-desk;
       };
 
