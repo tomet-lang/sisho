@@ -1,4 +1,4 @@
-//! Extensions: discovery, validation, listing and running.
+//! Extensions: discovery, validation, trust management, listing and running.
 //!
 //! An extension is a standalone executable on `PATH` named `sisho-<word>`,
 //! invoked as `sisho <word> ...`. `sisho --list` prints all installed extensions.
@@ -11,9 +11,11 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use anyhow::Result;
+use serde::Serialize;
 
 use crate::commands::with_standard_streams;
 use crate::output::{BROKEN_PIPE, is_broken_pipe};
+use crate::trust::{TrustConfig, TrustState, canonicalize_path};
 
 /// An extension word consists only of ASCII lowercase letters, digits, and
 /// hyphens, and does not start with a hyphen.
@@ -32,8 +34,12 @@ pub struct ExtensionEntry {
     pub word: String,
     /// Absolute or relative path to the executable program as found on `PATH`.
     pub path: PathBuf,
+    /// Canonicalized filesystem path to the executable program.
+    pub canonical_path: PathBuf,
     /// Whether this entry is active or shadowed.
     pub status: ExtensionStatus,
+    /// Trust state of the binary (`Untrusted`, `Allowed`, or `Denied`).
+    pub trust: TrustState,
     /// Encounter order to maintain stable sorting among duplicates.
     order: usize,
 }
@@ -49,9 +55,20 @@ pub enum ExtensionStatus {
     ShadowedByDuplicate(PathBuf),
 }
 
+#[derive(Serialize)]
+struct JsonExtensionEntry<'a> {
+    word: &'a str,
+    path: &'a Path,
+    canonical_path: &'a Path,
+    status: &'static str,
+    shadowed_by: Option<String>,
+    trust: TrustState,
+    info: Option<sisho_sdk::ExtensionInfo>,
+}
+
 /// Run `sisho --list`: scan `PATH` and print installed extensions.
-pub fn list(all: bool, verbose: bool) -> ExitCode {
-    let result = with_standard_streams(|out, _err| run_list(out, all, verbose));
+pub fn list(all: bool, verbose: bool, json: bool) -> ExitCode {
+    let result = with_standard_streams(|out, _err| run_list(out, all, verbose, json));
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) if is_broken_pipe(&error) => ExitCode::from(BROKEN_PIPE),
@@ -63,18 +80,16 @@ pub fn list(all: bool, verbose: bool) -> ExitCode {
 }
 
 /// Write the list of extensions to `out`.
-pub fn run_list(out: &mut dyn Write, all: bool, verbose: bool) -> Result<()> {
+pub fn run_list(out: &mut dyn Write, all: bool, verbose: bool, json: bool) -> Result<()> {
     let entries = scan();
-    format_entries(out, &entries, all, verbose)
+    if json {
+        format_entries_json(out, &entries, all, verbose)
+    } else {
+        format_entries(out, &entries, all, verbose)
+    }
 }
 
-/// Format and write `entries` to `out`.
-pub fn format_entries(
-    out: &mut dyn Write,
-    entries: &[ExtensionEntry],
-    all: bool,
-    verbose: bool,
-) -> Result<()> {
+fn filter_and_sort(entries: &[ExtensionEntry], all: bool) -> Vec<&ExtensionEntry> {
     let mut visible: Vec<&ExtensionEntry> = entries
         .iter()
         .filter(|entry| {
@@ -91,6 +106,63 @@ pub fn format_entries(
 
     // Sort alphabetically by word, then by encounter order for duplicates.
     visible.sort_by(|a, b| a.word.cmp(&b.word).then_with(|| a.order.cmp(&b.order)));
+    visible
+}
+
+/// Format and write `entries` as JSON to `out`.
+pub fn format_entries_json(
+    out: &mut dyn Write,
+    entries: &[ExtensionEntry],
+    all: bool,
+    verbose: bool,
+) -> Result<()> {
+    let visible = filter_and_sort(entries, all);
+    let mut json_entries = Vec::with_capacity(visible.len());
+
+    for entry in visible {
+        let (status, shadowed_by) = match &entry.status {
+            ExtensionStatus::Active => ("active", None),
+            ExtensionStatus::ShadowedByBuiltin => {
+                ("shadowed_by_builtin", Some("builtin".to_string()))
+            }
+            ExtensionStatus::ShadowedByDuplicate(orig) => (
+                "shadowed_by_duplicate",
+                Some(orig.display().to_string()),
+            ),
+        };
+        let info = if verbose
+            && entry.status == ExtensionStatus::Active
+            && entry.trust == TrustState::Allowed
+        {
+            query_info(&entry.word, &entry.path).filter(|info| info.word == entry.word)
+        } else {
+            None
+        };
+
+        json_entries.push(JsonExtensionEntry {
+            word: &entry.word,
+            path: &entry.path,
+            canonical_path: &entry.canonical_path,
+            status,
+            shadowed_by,
+            trust: entry.trust,
+            info,
+        });
+    }
+
+    let rendered = serde_json::to_string_pretty(&json_entries)?;
+    writeln!(out, "{rendered}")?;
+    Ok(())
+}
+
+/// Format and write `entries` to `out`.
+pub fn format_entries(
+    out: &mut dyn Write,
+    entries: &[ExtensionEntry],
+    all: bool,
+    verbose: bool,
+) -> Result<()> {
+    let visible = filter_and_sort(entries, all);
 
     let max_word_len = visible.iter().map(|e| e.word.len()).max().unwrap_or(0);
     let width = max_word_len.max(8);
@@ -98,9 +170,16 @@ pub fn format_entries(
     for entry in visible {
         match &entry.status {
             ExtensionStatus::Active => {
-                writeln!(out, "{:width$}  {}", entry.word, entry.path.display())?;
+                writeln!(
+                    out,
+                    "{:width$}  {} [{}]",
+                    entry.word,
+                    entry.path.display(),
+                    entry.trust
+                )?;
                 if verbose
-                    && let Some(info) = query_info(&entry.path)
+                    && entry.trust == TrustState::Allowed
+                    && let Some(info) = query_info(&entry.word, &entry.path)
                     && info.word == entry.word
                 {
                     let mut details = Vec::new();
@@ -165,14 +244,129 @@ fn format_capabilities(caps: &sisho_sdk::Capabilities) -> String {
     list.join(", ")
 }
 
-/// Scan directories on `PATH` for extensions.
-pub fn scan() -> Vec<ExtensionEntry> {
-    let path_var = env::var_os("PATH").unwrap_or_default();
-    scan_in(env::split_paths(&path_var))
+/// Update the trust state of `<target>` in `trust.json`.
+///
+/// `<target>` may be an extension word resolved via the active `PATH` entry
+/// (e.g. `desk` or `sisho-desk`), or an explicit path to a `sisho-<word>` executable.
+pub fn set_trust(target: &str, state: TrustState) -> ExitCode {
+    let mut config = TrustConfig::load();
+    let Some((word, canonical_path)) = resolve_target(target, &config, state) else {
+        eprintln!("sisho: extension '{target}' not found on PATH");
+        return ExitCode::from(crate::USAGE_ERROR);
+    };
+
+    config.set_state(&canonical_path, state);
+    if let Err(error) = config.save() {
+        eprintln!("sisho: {error:#}");
+        return ExitCode::from(crate::OWN_ERROR);
+    }
+
+    let result = with_standard_streams(|out, _err| {
+        match state {
+            TrustState::Allowed => {
+                writeln!(
+                    out,
+                    "Allowed sisho-{word} ({})",
+                    canonical_path.display()
+                )?;
+            }
+            TrustState::Denied => {
+                writeln!(out, "Denied sisho-{word} ({})", canonical_path.display())?;
+            }
+            TrustState::Untrusted => {
+                writeln!(
+                    out,
+                    "Reset trust for sisho-{word} ({}) to untrusted",
+                    canonical_path.display()
+                )?;
+            }
+        }
+        Ok(())
+    });
+
+    match result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) if is_broken_pipe(&error) => ExitCode::from(BROKEN_PIPE),
+        Err(error) => {
+            eprintln!("sisho: {error:#}");
+            ExitCode::from(crate::OWN_ERROR)
+        }
+    }
 }
 
-/// Scan specific directories for extensions.
-pub fn scan_in(dirs: impl IntoIterator<Item = PathBuf>) -> Vec<ExtensionEntry> {
+fn resolve_target(
+    target: &str,
+    config: &TrustConfig,
+    state: TrustState,
+) -> Option<(String, PathBuf)> {
+    if target.is_empty() {
+        return None;
+    }
+
+    // If `target` contains a path separator or refers directly to an existing file on disk
+    let looks_like_path =
+        target.contains('/') || target.contains(std::path::MAIN_SEPARATOR) || target.starts_with('.');
+    if looks_like_path {
+        let path = Path::new(target);
+        let file_name = path.file_name()?.to_str()?;
+        let word = file_name.strip_prefix("sisho-")?;
+        if !is_valid_word(word) {
+            return None;
+        }
+        let canonical = canonicalize_path(path);
+        if is_executable(path)
+            || (state == TrustState::Untrusted && config.binaries.contains_key(&canonical))
+        {
+            return Some((word.to_string(), canonical));
+        }
+        return None;
+    }
+
+    // Otherwise resolve by extension word (or `sisho-<word>`) on PATH
+    let entries = scan_with_trust(config);
+    if is_valid_word(target)
+        && let Some(entry) = entries
+            .iter()
+            .find(|e| e.status == ExtensionStatus::Active && e.word == target)
+    {
+        return Some((entry.word.clone(), entry.canonical_path.clone()));
+    }
+    if let Some(stripped) = target.strip_prefix("sisho-")
+        && is_valid_word(stripped)
+        && let Some(entry) = entries
+            .iter()
+            .find(|e| e.status == ExtensionStatus::Active && e.word == stripped)
+    {
+        return Some((entry.word.clone(), entry.canonical_path.clone()));
+    }
+
+    None
+}
+
+/// Find the active extension entry on `PATH` for `word`.
+pub fn find_active(word: &str) -> Option<ExtensionEntry> {
+    scan()
+        .into_iter()
+        .find(|entry| entry.status == ExtensionStatus::Active && entry.word == word)
+}
+
+/// Scan directories on `PATH` for extensions.
+pub fn scan() -> Vec<ExtensionEntry> {
+    let trust_config = TrustConfig::load();
+    scan_with_trust(&trust_config)
+}
+
+/// Scan directories on `PATH` for extensions with a pre-loaded [`TrustConfig`].
+pub fn scan_with_trust(trust_config: &TrustConfig) -> Vec<ExtensionEntry> {
+    let path_var = env::var_os("PATH").unwrap_or_default();
+    scan_in_with_trust(env::split_paths(&path_var), trust_config)
+}
+
+/// Scan specific directories for extensions with a pre-loaded [`TrustConfig`].
+pub fn scan_in_with_trust(
+    dirs: impl IntoIterator<Item = PathBuf>,
+    trust_config: &TrustConfig,
+) -> Vec<ExtensionEntry> {
     let mut entries = Vec::new();
     let mut first_seen: HashMap<String, PathBuf> = HashMap::new();
     let mut counter = 0;
@@ -222,10 +416,15 @@ pub fn scan_in(dirs: impl IntoIterator<Item = PathBuf>) -> Vec<ExtensionEntry> {
                 ExtensionStatus::Active
             };
 
+            let canonical_path = canonicalize_path(&path);
+            let trust = trust_config.state_for_canonical(&canonical_path);
+
             entries.push(ExtensionEntry {
                 word: word.to_string(),
                 path,
+                canonical_path,
                 status,
+                trust,
                 order: counter,
             });
         }
@@ -256,21 +455,51 @@ fn is_executable(path: &Path) -> bool {
     metadata.is_file()
 }
 
+/// Compute `SISHO_CONFIG_DIR` and `SISHO_DATA_DIR` environment variable pairs for `word`.
+///
+/// Resolves `$XDG_CONFIG_HOME/sisho/<word>` (fallback `$HOME/.config/sisho/<word>`) and
+/// `$XDG_DATA_HOME/sisho/<word>` (fallback `$HOME/.local/share/sisho/<word>`), ignoring any
+/// inherited `SISHO_CONFIG_DIR` or `SISHO_DATA_DIR` from a parent process so an outer
+/// extension's directory never leaks into another extension.
+pub fn extension_dir_envs(word: &str) -> Vec<(&'static str, PathBuf)> {
+    extension_dir_envs_with(word, |key| env::var_os(key))
+}
+
+fn extension_dir_envs_with<F>(word: &str, lookup: F) -> Vec<(&'static str, PathBuf)>
+where
+    F: Fn(&str) -> Option<std::ffi::OsString>,
+{
+    let lookup_without_sisho_override = |key: &str| match key {
+        sisho_sdk::CONFIG_DIR_ENV | sisho_sdk::DATA_DIR_ENV => None,
+        _ => lookup(key),
+    };
+    let mut envs = Vec::with_capacity(2);
+    if let Some(dir) = sisho_sdk::resolve_config_dir_with(word, lookup_without_sisho_override) {
+        envs.push((sisho_sdk::CONFIG_DIR_ENV, dir));
+    }
+    if let Some(dir) = sisho_sdk::resolve_data_dir_with(word, lookup_without_sisho_override) {
+        envs.push((sisho_sdk::DATA_DIR_ENV, dir));
+    }
+    envs
+}
+
 /// Query an extension executable for its metadata using `--sisho-extension-info`.
 ///
 /// Enforces a strict 500ms timeout and discards output on failure or timeout.
 /// Returns `None` if the executable does not support the protocol or fails.
-pub fn query_info(path: &Path) -> Option<sisho_sdk::ExtensionInfo> {
+pub fn query_info(word: &str, path: &Path) -> Option<sisho_sdk::ExtensionInfo> {
     const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(500);
     const POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(5);
 
-    let mut child = std::process::Command::new(path)
+    let mut command = std::process::Command::new(path);
+    command
         .arg(sisho_sdk::EXTENSION_INFO_FLAG)
+        .envs(extension_dir_envs(word))
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::null())
-        .spawn()
-        .ok()?;
+        .stderr(std::process::Stdio::null());
+
+    let mut child = command.spawn().ok()?;
 
     let start = std::time::Instant::now();
     loop {
@@ -326,7 +555,54 @@ mod tests {
 
     #[test]
     fn query_info_returns_none_for_missing_or_unsupported_binary() {
-        assert_eq!(query_info(Path::new("/non/existent/sisho-tool")), None);
+        assert_eq!(
+            query_info("tool", Path::new("/non/existent/sisho-tool")),
+            None
+        );
+    }
+
+    #[test]
+    fn extension_dir_envs_ignores_parent_sisho_dir_overrides() {
+        use std::ffi::OsString;
+
+        let envs = extension_dir_envs_with("echo", |k| match k {
+            "SISHO_CONFIG_DIR" => Some(OsString::from("/parent/config/board")),
+            "SISHO_DATA_DIR" => Some(OsString::from("/parent/data/board")),
+            "XDG_CONFIG_HOME" => Some(OsString::from("/xdg/config")),
+            "XDG_DATA_HOME" => Some(OsString::from("/xdg/data")),
+            "HOME" => Some(OsString::from("/home/alice")),
+            _ => None,
+        });
+        assert_eq!(
+            envs,
+            vec![
+                (
+                    "SISHO_CONFIG_DIR",
+                    PathBuf::from("/xdg/config/sisho/echo")
+                ),
+                ("SISHO_DATA_DIR", PathBuf::from("/xdg/data/sisho/echo")),
+            ]
+        );
+
+        let fallback_envs = extension_dir_envs_with("echo", |k| match k {
+            "SISHO_CONFIG_DIR" => Some(OsString::from("/parent/config/board")),
+            "SISHO_DATA_DIR" => Some(OsString::from("/parent/data/board")),
+            "HOME" => Some(OsString::from("/home/alice")),
+            _ => None,
+        });
+        assert_eq!(
+            fallback_envs,
+            vec![
+                (
+                    "SISHO_CONFIG_DIR",
+                    PathBuf::from("/home/alice/.config/sisho/echo")
+                ),
+                (
+                    "SISHO_DATA_DIR",
+                    PathBuf::from("/home/alice/.local/share/sisho/echo")
+                ),
+            ]
+        );
     }
 
     #[test]

@@ -6,11 +6,13 @@ mod commands;
 mod extension;
 mod output;
 mod report;
+mod trust;
 
 use std::process::ExitCode;
 
 use clap::{CommandFactory, FromArgMatches};
 use cli::{Cli, Command};
+use trust::TrustState;
 
 /// Exit code for an error of `sisho` itself, as opposed to a step that did
 /// not pass (1).
@@ -32,8 +34,28 @@ fn main() -> ExitCode {
         Err(error) => error.exit(),
     };
 
+    let has_ext_flag =
+        cli.list || cli.allow.is_some() || cli.deny.is_some() || cli.untrust.is_some();
+    if has_ext_flag && cli.command.is_some() {
+        Cli::command()
+            .error(
+                clap::error::ErrorKind::ArgumentConflict,
+                "extension management flags (--list, --allow, --deny, --untrust) cannot be combined with a subcommand",
+            )
+            .exit();
+    }
+
     if cli.list {
-        return extension::list(cli.all, cli.verbose);
+        return extension::list(cli.all, cli.verbose, cli.json);
+    }
+    if let Some(target) = &cli.allow {
+        return extension::set_trust(target, TrustState::Allowed);
+    }
+    if let Some(target) = &cli.deny {
+        return extension::set_trust(target, TrustState::Denied);
+    }
+    if let Some(target) = &cli.untrust {
+        return extension::set_trust(target, TrustState::Untrusted);
     }
 
     if let Err(error) = init_jobserver(cli.jobs.map(|n| n.get())) {

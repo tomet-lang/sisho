@@ -13,9 +13,13 @@ Orchestrate the Tomet ecosystem (tomet, twrit, catasto, tandr)
 Options:
 
 - `-j, --jobs <N>`: Number of parallel jobs to run. Only matters for the commands that run tools in parallel (`check`, `fix`). If a jobserver was inherited from the environment, it wins and `-j` is not used.
-- `-l, --list`: List installed extensions found on PATH.
+- `-l, --list`: List installed extensions found on PATH. Conflicts with `--allow`, `--deny`, `--untrust`.
 - `--all`: Show all matching executables on PATH, including hidden duplicates.
-- `-v, --verbose`: Show metadata reported by extensions.
+- `-v, --verbose`: Show metadata reported by allowed extensions.
+- `--json`: Print the extension list as JSON instead of human-readable text.
+- `--allow <TARGET>`: Mark an extension (by word on PATH or executable path) as allowed in the trust database. Conflicts with `--deny`, `--list`, `--untrust`.
+- `--deny <TARGET>`: Mark an extension (by word on PATH or executable path) as denied in the trust database. Conflicts with `--allow`, `--list`, `--untrust`.
+- `--untrust <TARGET>`: Remove an extension (by word on PATH or executable path) from the trust database, resetting it to untrusted. Conflicts with `--allow`, `--deny`, `--list`.
 
 ==[ sisho check ]
 

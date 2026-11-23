@@ -12,63 +12,105 @@ The top-level `sisho --help` mentions extensions at the end: "Extensions: a prog
 
 =[ Precedence ]
 
-Built-in commands (`check`, `fix`, `convert`, `serve`) and known programs (`tomet`, `twrit`, `catasto`, `tandr`, `shelf`) always win over an extension of the same word. An executable named `sisho-check` or `sisho-tomet` on `PATH` will never be invoked by `sisho`.
+Built-in commands (`check`, `fix`, `convert`, `serve`, `spec`) and known programs (`tomet`, `twrit`, `catasto`, `tandr`, `shelf`) always win over an extension of the same word. An executable named `sisho-check` or `sisho-tomet` on `PATH` will never be invoked by `sisho`.
 
-=[ Contract ]
+=[ Trust & Gatekeeper ]
 
-1. **Subprocess execution**: An extension is executed as an independent subprocess. It does not link any `sisho` crates.
-2. **Transparent pass-through**: `sisho` passes all remaining arguments and flags unchanged, hands over the controlling terminal (standard input, standard output, and standard error), and adopts the extension's exit status.
-3. **No version checks**: `sisho` does not query an extension for `--version` and enforces no minimum version requirement (the same contract as `sisho shelf`).
-4. **Allowed word format**: An extension word must consist only of ASCII lowercase letters, digits, and hyphens (`-`), and must not start with a hyphen. Words containing uppercase letters, path separators (`/`), or relative references (`../`) are rejected immediately as usage errors (exit 2).
-5. **Lookup & Exit codes**:
-   - `sisho` does not scan directories on `PATH`; it directly executes `sisho-<word>`.
-   - If no matching executable is found on `PATH`, `sisho` prints an error to standard error explaining that `<word>` is neither a command nor a tool, and exits with 2 (usage error). It does not exit 127 here (127 is reserved for known tools like `tomet` that are not installed).
-   - If the extension executable exists but cannot be started (e.g. permission denied), `sisho` exits 126.
-   - If the extension is terminated by a signal, `sisho` exits with 128 plus the signal number.
-   - Otherwise, `sisho` exits with the extension's exit code.
+Because `PATH` may contain untrusted or newly installed `sisho-<word>` binaries, `sisho` acts as the sole gatekeeper of extension execution on the local machine.
 
-=[ Listing Extensions ]
-
-`sisho --list` (or `-l`): print all installed extensions found on `PATH`.
-
-1. **Discovery**: `sisho` inspects directories in `PATH` order. A file is considered an extension if:
-   - Its filename matches `sisho-<word>` where `<word>` conforms to the allowed word format (ASCII lowercase letters, digits, hyphens, not starting with a hyphen).
-   - It is executable by the current user.
-2. **No subprocess execution**: `sisho --list` never executes discovered extension binaries.
-3. **Output format**:
-   - For each extension, prints the `<word>` and the path to the executable, separated by spaces.
-   - Extensions shadowed by a built-in command or known tool are annotated with `(shadowed by builtin)`.
-   - When the same extension word appears multiple times in different `PATH` directories, only the first occurrence (the one that would run) is shown by default.
-4. **`--all` flag**:
-   - `sisho --list --all`: also displays duplicate programs found later in `PATH`, annotated with `(shadowed by <first_path>)`.
-5. **`-v, --verbose` flag**:
-   - `sisho --list -v`: queries active extensions for metadata using `--sisho-extension-info` (with a strict 500ms timeout) and prints version, summary, and capabilities indented on a second line below each active entry. Discards output and omits the extra line if the extension does not support `--sisho-extension-info`, times out, or fails.
-6. **Exit codes**:
-   - 0 on success (an empty list when no extensions are found is a success).
-   - 2 on usage error (e.g. invalid arguments, or `--all` / `-v` passed without `--list`).
-   - 141 if standard output is closed (broken pipe).
-
-=[ Extension Protocols ]
-
-Extensions operate as independent subprocesses, but may optionally adopt standard conventions to integrate more richly with `sisho` and the system.
-
-==[ Metadata Disclosure: `--sisho-extension-info` ]
-
-An extension may optionally implement `--sisho-extension-info` to report its metadata as a single JSON object to standard output and exit 0.
-
-1. **Schema**:
-   - `schema_version`: integer, currently `1`.
-   - `word`: must match the extension's word (e.g. `"desk"`).
-   - `version`: version string, conforming to SemVer.
-   - `about`: one-line summary of what the extension does.
-   - `capabilities`: optional map of boolean features (e.g. `{"tui": true, "interactive": false}`).
-2. **Execution rules**:
-   - `sisho` does not execute `--sisho-extension-info` during regular discovery (`sisho --list` by default) to keep listing instant.
-   - Any query executing `--sisho-extension-info` (such as `sisho --list -v` or rich dashboards) must enforce a strict timeout (e.g. 500ms) and discard output on failure.
-
-==[ Cooperative Concurrency: GNU Jobserver ]
-
-When `sisho` invokes an extension, it inherits the process jobserver environment variables and file descriptors (configured via GNU jobserver in `sisho-run`).
-
-1. **Resource sharing**: Extensions performing parallel work (e.g. parallel file searches or conversions) should respect jobserver tokens to avoid oversaturating available CPUs.
-2. **`sisho-sdk`**: An optional, minimal SDK crate (`sisho-sdk`) is provided for Rust extension authors to implement metadata disclosure and participate in the jobserver protocol without boilerplate.
+1. **Trust database**:
+   - Stored at `$XDG_DATA_HOME/sisho/trust.json` (falling back to `$HOME/.local/share/sisho/trust.json`), or overridden via `SISHO_TRUST_FILE`.
+   - Schema:
+     ```json
+``      `` {
+``      ``   "schema_version": 1,
+``      ``   "binaries": {
+``      ``     "/nix/store/xxx-sisho-desk/bin/sisho-desk": "allowed",
+``      ``     "/home/user/bin/sisho-evil": "denied"
+``      ``   }
+``      `` }
+``      ```
+``    - Every key in `binaries` is the **canonicalized filesystem path** (`fs::canonicalize`) of the executable. Any binary path not present in `binaries` has trust state `untrusted`. Replacing a binary with one at a different canonical path (such as a new Nix store derivation or another directory on `PATH`) automatically resets its trust state to `untrusted`.
+`` 2. **Gatekeeper rules**:
+``    - `sisho <word> ...` only executes an active `sisho-<word>` binary if its canonical path is marked `"allowed"` in `trust.json`.
+``    - If the binary is `untrusted` or `denied`, `sisho` **never executes it**. Instead, it prints:
+``      `sisho: extension '<word>' (<canonical_path>) is not trusted (<untrusted|denied>); run 'sisho --allow <word>' to allow it`
+``      to standard error and exits with `126`.
+``    - `sisho --list -v` (and `sisho --list -v --json`) only executes `--sisho-extension-info` on active extensions whose trust state is `allowed`. It never runs `--sisho-extension-info` on `untrusted` or `denied` binaries.
+`` 3. **Managing trust (`--allow`, `--deny`, `--untrust`)**:
+``    - `sisho --allow <TARGET>`: marks `<TARGET>` (an active extension word like `desk` on `PATH`, or an explicit path to a `sisho-<word>` executable) as `"allowed"` in `trust.json` and prints `Allowed sisho-<word> (<canonical_path>)`.
+``    - `sisho --deny <TARGET>`: marks `<TARGET>` as `"denied"` in `trust.json` and prints `Denied sisho-<word> (<canonical_path>)`.
+``    - `sisho --untrust <TARGET>`: removes `<TARGET>` from `trust.json` (resetting it to `untrusted`) and prints `Reset trust for sisho-<word> (<canonical_path>) to untrusted`.
+``    - `--allow`, `--deny`, `--untrust`, and `--list` are top-level flags (taking no subcommand word namespace) and are mutually exclusive with subcommands and with each other. Passing an unknown `<TARGET>` or invalid flag combination exits with `2` (usage error).
+``
+`` =[ Contract ]
+``
+`` 1. **Subprocess execution**: An allowed extension is executed as an independent subprocess. It does not link any `sisho` crates.
+`` 2. **Transparent pass-through**: `sisho` passes all remaining arguments and flags unchanged, hands over the controlling terminal (standard input, standard output, and standard error), and adopts the extension's exit status.
+`` 3. **No version checks**: `sisho` does not query an extension for `--version` and enforces no minimum version requirement (the same contract as `sisho shelf`).
+`` 4. **Allowed word format**: An extension word must consist only of ASCII lowercase letters, digits, and hyphens (`-`), and must not start with a hyphen. Words containing uppercase letters, path separators (`/`), or relative references (`../`) are rejected immediately as usage errors (exit 2).
+`` 5. **Lookup & Exit codes**:
+``    - `sisho` locates the active `sisho-<word>` on `PATH` and checks its canonical path in `trust.json`.
+``    - If no matching executable is found on `PATH`, `sisho` prints an error to standard error explaining that `<word>` is neither a command nor a tool, and exits with 2 (usage error). It does not exit 127 here (127 is reserved for known tools like `tomet` that are not installed).
+``    - If the extension executable is found on `PATH` but is `untrusted` or `denied`, or cannot be started by the OS, `sisho` exits 126.
+``    - If the extension is terminated by a signal, `sisho` exits with 128 plus the signal number.
+``    - Otherwise, `sisho` exits with the extension's exit code.
+``
+`` =[ Listing Extensions ]
+``
+`` `sisho --list` (or `-l`): print all installed extensions found on `PATH`.
+``
+`` 1. **Discovery**: `sisho` inspects directories in `PATH` order. A file is considered an extension if:
+``    - Its filename matches `sisho-<word>` where `<word>` conforms to the allowed word format (ASCII lowercase letters, digits, hyphens, not starting with a hyphen).
+``    - It is executable by the current user.
+`` 2. **No subprocess execution**: `sisho --list` never executes discovered extension binaries.
+`` 3. **Output format**:
+``    - For each active extension, prints the `<word>`, the path to the executable, and its trust badge (`[allowed]`, `[untrusted]`, or `[denied]`).
+``    - Extensions shadowed by a built-in command or known tool are annotated with `(shadowed by builtin)`.
+``    - When the same extension word appears multiple times in different `PATH` directories, only the first occurrence (the one that would run) is shown by default.
+`` 4. **`--all` flag**:
+``    - `sisho --list --all`: also displays duplicate programs found later in `PATH`, annotated with `(shadowed by <first_path>)`.
+`` 5. **`-v, --verbose` flag**:
+``    - `sisho --list -v`: queries active, **allowed** extensions for metadata using `--sisho-extension-info` (with a strict 500ms timeout) and prints version, summary, and capabilities indented on a second line below each active entry. Never executes `untrusted` or `denied` extensions. Discards output and omits the extra line if the extension does not support `--sisho-extension-info`, times out, or fails.
+`` 6. **`--json` flag**:
+``    - `sisho --list --json` (combinable with `--all` and `-v`): prints a pretty-formatted JSON array of objects containing `word`, `path`, `canonical_path`, `status` (`"active"`, `"shadowed_by_builtin"`, or `"shadowed_by_duplicate"`), `shadowed_by`, `trust` (`"allowed"`, `"untrusted"`, or `"denied"`), and `info` (populated only when `-v` is passed and `trust` is `"allowed"`).
+`` 7. **Exit codes**:
+``    - 0 on success (an empty list when no extensions are found is a success).
+``    - 2 on usage error (e.g. invalid arguments, or `--all` / `-v` / `--json` passed without `--list`).
+``    - 141 if standard output is closed (broken pipe).
+``
+`` =[ Extension Protocols ]
+``
+`` Extensions operate as independent subprocesses, but may optionally adopt standard conventions to integrate more richly with `sisho` and the system.
+``
+`` ==[ Metadata Disclosure: `--sisho-extension-info` ]
+``
+`` An extension may optionally implement `--sisho-extension-info` to report its metadata as a single JSON object to standard output and exit 0.
+``
+`` 1. **Schema**:
+``    - `schema_version`: integer, currently `1`.
+``    - `word`: must match the extension's word (e.g. `"desk"`).
+``    - `version`: version string, conforming to SemVer.
+``    - `about`: one-line summary of what the extension does.
+``    - `capabilities`: optional map of boolean features (e.g. `{"tui": true, "interactive": false}`).
+`` 2. **Execution rules**:
+``    - `sisho` does not execute `--sisho-extension-info` during regular discovery (`sisho --list` by default) to keep listing instant.
+``    - `sisho` never executes `--sisho-extension-info` on an `untrusted` or `denied` extension.
+``    - Any query executing `--sisho-extension-info` on an `allowed` extension (such as `sisho --list -v` or rich dashboards) must enforce a strict timeout (e.g. 500ms) and discard output on failure.
+``
+`` ==[ Cooperative Concurrency: GNU Jobserver ]
+``
+`` When `sisho` invokes an extension, it inherits the process jobserver environment variables and file descriptors (configured via GNU jobserver in `sisho-run`).
+``
+`` 1. **Resource sharing**: Extensions performing parallel work (e.g. parallel file searches or conversions) should respect jobserver tokens to avoid oversaturating available CPUs.
+`` 2. **`sisho-sdk`**: An optional, minimal SDK crate (`sisho-sdk`) is provided for Rust extension authors to implement metadata disclosure, participate in the jobserver protocol, and resolve standard configuration and data directories without boilerplate.
+``
+`` ==[ Configuration & Data Directories: `SISHO_CONFIG_DIR` and `SISHO_DATA_DIR` ]
+``
+`` When `sisho` launches an allowed extension `sisho-<word>` (both via `sisho <word> ...` and when querying `--sisho-extension-info`), it passes isolated configuration and data directory paths in the child environment:
+``
+`` 1. **Passed variables**:
+``    - `SISHO_CONFIG_DIR`: `$XDG_CONFIG_HOME/sisho/<word>` if `XDG_CONFIG_HOME` is set and non-empty, otherwise `$HOME/.config/sisho/<word>`.
+``    - `SISHO_DATA_DIR`: `$XDG_DATA_HOME/sisho/<word>` if `XDG_DATA_HOME` is set and non-empty, otherwise `$HOME/.local/share/sisho/<word>`.
+`` 2. **No parent leakage**: `sisho` always computes these directories from `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, and `HOME`, and never forwards an inherited `SISHO_CONFIG_DIR` or `SISHO_DATA_DIR` that may belong to another extension.
+`` 3. **`sisho-sdk` helpers**: Rust extensions can call `sisho_sdk::config_dir(word)` and `sisho_sdk::data_dir(word)` (using `CONFIG_DIR_ENV` / `DATA_DIR_ENV`). These check `SISHO_CONFIG_DIR` / `SISHO_DATA_DIR` first and fall back to `$XDG_*_HOME/sisho/<word>` and `$HOME/.config/sisho/<word>` or `$HOME/.local/share/sisho/<word>`, yielding identical paths whether the binary is invoked via `sisho <word>` or directly as `sisho-<word>`.

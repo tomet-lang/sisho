@@ -15,6 +15,7 @@ pub struct Step {
     name: String,
     program: OsString,
     args: Vec<OsString>,
+    envs: Vec<(OsString, OsString)>,
     current_dir: Option<PathBuf>,
 }
 
@@ -25,6 +26,7 @@ impl Step {
             name: name.into(),
             program: program.as_ref().to_owned(),
             args: Vec::new(),
+            envs: Vec::new(),
             current_dir: None,
         }
     }
@@ -41,6 +43,12 @@ impl Step {
     {
         self.args
             .extend(args.into_iter().map(|arg| arg.as_ref().to_owned()));
+        self
+    }
+
+    /// Set an environment variable for the child process.
+    pub fn env(mut self, key: impl Into<OsString>, value: impl Into<OsString>) -> Self {
+        self.envs.push((key.into(), value.into()));
         self
     }
 
@@ -122,6 +130,7 @@ impl Step {
     fn command(&self) -> Command {
         let mut command = Command::new(&self.program);
         command.args(&self.args);
+        command.envs(self.envs.iter().map(|(k, v)| (k, v)));
         if let Some(dir) = &self.current_dir {
             command.current_dir(dir);
         }
@@ -164,4 +173,31 @@ fn signal_of(status: ExitStatus) -> Status {
 #[cfg(not(unix))]
 fn signal_of(_status: ExitStatus) -> Status {
     Status::Failed { code: -1 }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn step_env_sets_environment_variables_on_command() {
+        let step = Step::new("echo", "echo")
+            .env("SISHO_CONFIG_DIR", "/tmp/cfg/sisho/echo")
+            .env("SISHO_DATA_DIR", PathBuf::from("/tmp/data/sisho/echo"));
+
+        let command = step.command();
+        let envs: Vec<_> = command
+            .get_envs()
+            .map(|(k, v)| (k.to_os_string(), v.map(|val| val.to_os_string())))
+            .collect();
+
+        assert!(envs.contains(&(
+            OsString::from("SISHO_CONFIG_DIR"),
+            Some(OsString::from("/tmp/cfg/sisho/echo"))
+        )));
+        assert!(envs.contains(&(
+            OsString::from("SISHO_DATA_DIR"),
+            Some(OsString::from("/tmp/data/sisho/echo"))
+        )));
+    }
 }

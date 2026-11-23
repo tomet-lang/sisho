@@ -18,16 +18,48 @@ pub struct Cli {
     pub jobs: Option<std::num::NonZeroUsize>,
 
     /// List installed extensions found on PATH.
-    #[arg(short = 'l', long = "list")]
+    #[arg(
+        short = 'l',
+        long = "list",
+        conflicts_with_all = ["allow", "deny", "untrust"]
+    )]
     pub list: bool,
 
     /// Show all matching executables on PATH, including hidden duplicates.
     #[arg(long, requires = "list")]
     pub all: bool,
 
-    /// Show metadata reported by extensions.
+    /// Show metadata reported by allowed extensions.
     #[arg(short = 'v', long = "verbose", requires = "list")]
     pub verbose: bool,
+
+    /// Print the extension list as JSON instead of human-readable text.
+    #[arg(long, requires = "list")]
+    pub json: bool,
+
+    /// Mark an extension (by word on PATH or executable path) as allowed in the trust database.
+    #[arg(
+        long,
+        value_name = "TARGET",
+        conflicts_with_all = ["list", "deny", "untrust"]
+    )]
+    pub allow: Option<String>,
+
+    /// Mark an extension (by word on PATH or executable path) as denied in the trust database.
+    #[arg(
+        long,
+        value_name = "TARGET",
+        conflicts_with_all = ["list", "allow", "untrust"]
+    )]
+    pub deny: Option<String>,
+
+    /// Remove an extension (by word on PATH or executable path) from the trust database, resetting it to untrusted.
+    #[arg(
+        long,
+        value_name = "TARGET",
+        conflicts_with_all = ["list", "allow", "deny"]
+    )]
+    pub untrust: Option<String>,
 
     #[command(subcommand)]
     pub command: Option<Command>,

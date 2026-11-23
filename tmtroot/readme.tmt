@@ -30,7 +30,8 @@ The design memo is @link(tmtroot/dev/design.tmt).
 `` sisho serve <file>         # a document as HTML over HTTP on 127.0.0.1, rendered again per request
 `` sisho board [path]         # interactive board (extension): project health, checks, links, extension panes
 `` sisho desk [path]          # interactive desk (extension): migrate Markdown, edit metadata, search structure
-`` sisho --list [--all]       # list installed extensions found on PATH (-l)
+`` sisho --list [--all] [-v] [--json]  # list installed extensions found on PATH (-l)
+`` sisho --allow <target>     # allow an extension binary in ~/.local/share/sisho/trust.json (--deny, --untrust)
 `` sisho <tool> ...     # run a tool with the rest of the command line, unchanged
 `` sisho catasto <command>   # a shared file taken and kept where a manifest says (init, add, list, sync, ...)
 ```
@@ -55,7 +56,7 @@ When the reader of the output goes away early (`sisho --list | head`), `sisho` e
 
 `sisho shelf ...` is the same pass-through to `tomet-shelf`, which builds and serves a site from a vault: `sisho shelf build`, `sisho shelf serve`. The word is the role and the program keeps its own name. `shelf` takes no part in `check` or `fix`.
 
-An extension is a program named `sisho-<word>` on `PATH`, run as `sisho <word> ...`. It is the same pass-through: `sisho` hands over the terminal, forwards all arguments and flags, and takes its exit code. Built-in commands and known tools always take precedence over an extension of the same name. An unknown word with no matching extension on `PATH` exits 2. `sisho --list` (or `-l`) lists all installed extensions found on `PATH`; with `--all`, duplicate programs that are shadowed by earlier entries in `PATH` are also shown. The contract is written down under @link(tmtroot/spec/cli/extension.tmt).
+An extension is a program named `sisho-<word>` on `PATH`, run as `sisho <word> ...`. `sisho` gates extension execution through the machine-local trust database at `$XDG_DATA_HOME/sisho/trust.json` (`~/.local/share/sisho/trust.json`), keyed by each executable's canonical path: newly discovered extensions start as `untrusted` and are refused with exit code 126 until explicitly allowed with `sisho --allow <word>` (or blocked with `sisho --deny <word>` and reset with `sisho --untrust <word>`). Once allowed, `sisho <word> ...` is the same pass-through: `sisho` hands over the terminal, forwards all arguments and flags, and takes its exit code. Built-in commands and known tools always take precedence over an extension of the same name. An unknown word with no matching extension on `PATH` exits 2. `sisho --list` (or `-l`) lists all installed extensions found on `PATH` with their trust status (`--all` includes shadowed duplicates, `-v` queries metadata from allowed extensions, and `--json` emits machine-readable JSON). The contract is written down under @link(tmtroot/spec/cli/extension.tmt).
 
 ==[ Taking a shared file ]
 

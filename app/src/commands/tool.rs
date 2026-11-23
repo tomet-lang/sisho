@@ -8,7 +8,12 @@ use sisho_run::{Status, Step};
 use sisho_tools::{program, programs};
 
 use crate::USAGE_ERROR;
-use crate::extension::is_valid_word;
+use crate::extension::{extension_dir_envs, find_active, is_valid_word};
+use crate::trust::TrustState;
+
+/// Exit code when an extension is found on `PATH` but cannot be executed
+/// (for example because it is `untrusted` or `denied`).
+const CANNOT_EXEC: u8 = 126;
 
 /// `sisho <tool> ...`: run the tool or extension with the rest of the command line.
 ///
@@ -25,19 +30,37 @@ pub fn tool(words: &[OsString]) -> Result<ExitCode> {
         return Ok(run_inherited(&step, program.program()));
     }
 
-    if let Some(word) = word.filter(|w| is_valid_word(w)) {
-        let extension = format!("sisho-{word}");
-        let status = Step::new(word, &extension).args(args).run_inherited();
-        match &status {
-            Status::NotFound => {
-                // Fall through: an unknown word and a missing extension
-                // both report the same usage error (exit 2).
+    if let Some(word) = word.filter(|w| is_valid_word(w))
+        && let Some(entry) = find_active(word)
+    {
+        match entry.trust {
+            TrustState::Allowed => {
+                let extension = format!("sisho-{word}");
+                let mut step = Step::new(word, &extension).args(args);
+                for (key, val) in extension_dir_envs(word) {
+                    step = step.env(key, val);
+                }
+                let status = step.run_inherited();
+                match &status {
+                    Status::NotFound => {
+                        // Fall through: an unknown word and a missing extension
+                        // both report the same usage error (exit 2).
+                    }
+                    Status::CouldNotStart { reason } => {
+                        eprintln!("sisho: could not start {extension}: {reason}");
+                        return Ok(ExitCode::from(passthrough_code(&status)));
+                    }
+                    _ => return Ok(ExitCode::from(passthrough_code(&status))),
+                }
             }
-            Status::CouldNotStart { reason } => {
-                eprintln!("sisho: could not start {extension}: {reason}");
-                return Ok(ExitCode::from(passthrough_code(&status)));
+            TrustState::Untrusted | TrustState::Denied => {
+                eprintln!(
+                    "sisho: extension '{word}' ({}) is not trusted ({}); run 'sisho --allow {word}' to allow it",
+                    entry.canonical_path.display(),
+                    entry.trust
+                );
+                return Ok(ExitCode::from(CANNOT_EXEC));
             }
-            _ => return Ok(ExitCode::from(passthrough_code(&status))),
         }
     }
 

@@ -9,8 +9,61 @@ Layer 0: SDK and protocol definitions for `sisho` extensions.
 An extension is an independent subprocess on `PATH` named `sisho-<word>`.
 This crate provides definitions and utilities for extension developers:
 
+- `dirs`: Standard configuration and data directory resolution (`SISHO_CONFIG_DIR`, `SISHO_DATA_DIR`).
 - `info`: Metadata disclosure protocol (`--sisho-extension-info`).
 - `jobserver`: GNU Jobserver coordination via \[`jobserver_gate`\].
+
+==[Module dirs]
+
+Standard configuration and data directory resolution for `sisho` extensions.
+
+When `sisho` invokes an allowed extension `sisho-<word>`, it sets
+\[`CONFIG_DIR_ENV`\] (`SISHO_CONFIG_DIR`) and \[`DATA_DIR_ENV`\] (`SISHO_DATA_DIR`)
+in the child process environment. Extensions can call \[`config_dir`\] and
+\[`data_dir`\] to resolve their isolated directories whether invoked via
+`sisho <word>` or directly as `sisho-<word>`.
+
+===[Functions]
+
+====[fn config_dir]
+
+Resolve the configuration directory for the extension named `word`.
+
+Precedence:
+1. `SISHO_CONFIG_DIR` if set and non-empty.
+2. `$XDG_CONFIG_HOME/sisho/<word>` if `XDG_CONFIG_HOME` is set and non-empty.
+3. `$HOME/.config/sisho/<word>` if `HOME` is set and non-empty.
+4. `None` otherwise.
+
+====[fn data_dir]
+
+Resolve the data directory for the extension named `word`.
+
+Precedence:
+1. `SISHO_DATA_DIR` if set and non-empty.
+2. `$XDG_DATA_HOME/sisho/<word>` if `XDG_DATA_HOME` is set and non-empty.
+3. `$HOME/.local/share/sisho/<word>` if `HOME` is set and non-empty.
+4. `None` otherwise.
+
+====[fn resolve_config_dir_with]
+
+Resolve the configuration directory for `word` using a custom environment lookup function.
+
+====[fn resolve_data_dir_with]
+
+Resolve the data directory for `word` using a custom environment lookup function.
+
+===[Constants]
+
+====[const CONFIG_DIR_ENV]
+
+Environment variable set by `sisho` pointing to the extension's configuration directory
+(`$XDG_CONFIG_HOME/sisho/<word>` or `$HOME/.config/sisho/<word>`).
+
+====[const DATA_DIR_ENV]
+
+Environment variable set by `sisho` pointing to the extension's data directory
+(`$XDG_DATA_HOME/sisho/<word>` or `$HOME/.local/share/sisho/<word>`).
 
 ==[Module info]
 

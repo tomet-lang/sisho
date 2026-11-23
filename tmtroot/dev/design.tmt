@@ -56,6 +56,7 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
   -. 位置づけ: 拡張コマンド (`sisho-<word>`) は独立子プロセスであり、プロトコル（CLI 引数、終了コード、JSON）は言語非依存。`sisho-sdk` は必須のフレームワークではなく、Rust で拡張を書く開発者が定型処理（メタデータ開示や jobserver 連携）を安全に実装するためのオプショナルな補助 SDK（`cargo-metadata` や `clap-cargo` と同様の位置づけ）。
   -. メタデータ開示: `--sisho-extension-info` を受け取った拡張は、バージョンや説明文 (`about`)、機能 (`capabilities`) を単一の JSON オブジェクトとして標準出力に出して終了コード 0 で終わる。`sisho --list` やダッシュボード (`sisho-board`) での豊かな情報表示に使う。
   -. 並列実行・jobserver 連携: `sisho` が子プロセス起動時に引き渡す GNU jobserver の環境変数と記述子を、拡張側で安全に解釈・参加するためのヘルパーを提供する。
+  -. ディレクトリ引き渡し規約 (`SISHO_CONFIG_DIR` / `SISHO_DATA_DIR`): 許可済み拡張 `sisho-<word>` を起動する際（`sisho <word>` および `--sisho-extension-info` 問い合わせ）、`sisho` は `XDG_CONFIG_HOME` / `XDG_DATA_HOME` / `HOME` から算出した `$XDG_CONFIG_HOME/sisho/<word>`（既定 `$HOME/.config/sisho/<word>`）と `$XDG_DATA_HOME/sisho/<word>`（既定 `$HOME/.local/share/sisho/<word>`）をそれぞれ `SISHO_CONFIG_DIR`・`SISHO_DATA_DIR` として渡す。親プロセスから継承した `SISHO_CONFIG_DIR` / `SISHO_DATA_DIR` は別の拡張の可能性があるため引き継がない。`sisho-sdk` は `sisho_sdk::{config_dir, data_dir}` を提供し、`sisho <word>` 経由でも `sisho-<word>` 直接起動でも同じパスに解決できるようにする。
   -. クレート配置: レイヤー 0 (`crates/sisho-sdk`)。`sisho` の内部ランタイム (`sisho-run` や `sisho-vault`) に一切依存せず、純粋なプロトコル型と最小限のヘルパー（`serde`, `serde_json`, `jobserver`）のみを持つ。
 
 ===[ 動詞 ]
@@ -159,8 +160,9 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
      - `sisho board [path]`: `sisho desk` と同じく、通常の拡張機構 (`sisho-<word>`) として `PATH` 上の `sisho-board` を明示的に起動する。
      - 引数なしの `sisho`: `sisho-board` を暗黙には起動せず、端末の有無にかかわらず常にヘルプを表示して終了コード 2 で終わる。
   3. 責務の境界:
-     - `sisho` 本体 (`sisho-sdk`) は `--sisho-extension-info` と jobserver 連携のみを持つ。
-     - ボード固有のプロトコル (`--sisho-board-pane`, `BoardPane` 等) や信頼設定 (`~/.config/sisho/board.json`) はすべて `sisho-board` リポジトリ側が所有する。これにより「`sisho` 本体は独自の設定ファイルやマニフェストを持たない」という原則を完全に守る。
+     - `sisho` 本体 (`sisho-sdk`) は `--sisho-extension-info`・jobserver 連携・ディレクトリ解決 (`sisho_sdk::{config_dir, data_dir}`) のみを持つ。
+     - 拡張の実行信頼リスト (`$XDG_DATA_HOME/sisho/trust.json`, 既定 `~/.local/share/sisho/trust.json`) は、門番である `sisho` 本体が唯一所有・管理する (2026-10-25 決定)。これは vault (プロジェクト) の設定・マニフェストではなく、マシンローカルな `PATH` 上の未知バイナリ実行を防ぐセキュリティ境界である。キーにはバイナリの正規化パス (`fs::canonicalize`) を用い、`sisho --allow <target>` / `--deny <target>` / `--untrust <target>` で状態 (`allowed` / `denied` / `untrusted`) を切り替える。`sisho <word>` の起動および `sisho --list -v` での `--sisho-extension-info` 問い合わせは、`allowed` のバイナリに対してのみ実行し、`untrusted` または `denied` のバイナリは一切起動しない (`sisho <word>` は終了コード 126 で拒否する)。
+     - ボード固有のプロトコル (`--sisho-board-pane`, `BoardPane` 等) は `sisho-board` リポジトリ側が所有し、拡張の発見と信頼状態の取得・変更は `sisho --list -v --json` および `sisho --allow` / `--deny` / `--untrust` を呼び出して `sisho` 本体に委譲する。これにより「`sisho` 本体はプロジェクト独自の設定ファイルやマニフェストを持たない」という原則を守りつつ、CLI と TUI で信頼境界を完全に一元化する。
 - `--advanced`・`--lang`・`--body` は `--to html` のときだけ。ほかの形式に付けると使い方の誤りで、終了コード 2。
 - 描画の糊(パースと準備、各形式への描画)は `sisho-vault` の `render` に 1 か所だけ置き、`export` と `convert` が共有する。`serve` は `convert` の関数を通して使う。
 

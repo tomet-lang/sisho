@@ -34,7 +34,10 @@ fn lists_one_installed_extension() {
     let output = sandbox.sisho(&["--list"], "");
     assert_eq!(code(&output), 0);
     let out_str = stdout(&output);
-    assert_eq!(out_str.trim(), format!("desk      {}", ext_path.display()));
+    assert_eq!(
+        out_str.trim(),
+        format!("desk      {} [untrusted]", ext_path.display())
+    );
 }
 
 #[test]
@@ -50,6 +53,7 @@ fn lists_multiple_extensions_across_different_directories() {
         .args(["--list"])
         .env_clear()
         .env("PATH", &combined_path)
+        .env("SISHO_TRUST_FILE", sb1.trust_file())
         .output()
         .unwrap();
 
@@ -60,8 +64,10 @@ fn lists_multiple_extensions_across_different_directories() {
     // Alphabetical sort: alpha before beta
     assert!(lines[0].starts_with("alpha "));
     assert!(lines[0].contains(&path_alpha.display().to_string()));
+    assert!(lines[0].ends_with("[untrusted]"));
     assert!(lines[1].starts_with("beta "));
     assert!(lines[1].contains(&path_beta.display().to_string()));
+    assert!(lines[1].ends_with("[untrusted]"));
 }
 
 #[test]
@@ -128,6 +134,7 @@ fn duplicate_names_in_path_show_only_first_by_default() {
         .args(["--list"])
         .env_clear()
         .env("PATH", &combined_path)
+        .env("SISHO_TRUST_FILE", sb1.trust_file())
         .output()
         .unwrap();
 
@@ -152,6 +159,7 @@ fn duplicate_names_with_all_flag_shows_hidden_duplicates() {
         .args(["--list", "--all"])
         .env_clear()
         .env("PATH", &combined_path)
+        .env("SISHO_TRUST_FILE", sb1.trust_file())
         .output()
         .unwrap();
 
@@ -179,7 +187,7 @@ fn short_flag_l_works_identically() {
     assert_eq!(code(&output), 0);
     assert_eq!(
         stdout(&output).trim(),
-        format!("desk      {}", ext_path.display())
+        format!("desk      {} [untrusted]", ext_path.display())
     );
 }
 
@@ -211,7 +219,7 @@ fn make_script(dir: &std::path::Path, name: &str, content: &str) -> std::path::P
 }
 
 #[test]
-fn list_verbose_displays_extension_metadata() {
+fn list_verbose_displays_extension_metadata_when_allowed() {
     let sandbox = Sandbox::new("list-verbose-metadata");
     let script = r#"#!/bin/sh
 if [ "$1" = "--sisho-extension-info" ]; then
@@ -221,13 +229,17 @@ fi
 echo "desk"
 "#;
     let ext_path = make_script(&sandbox.dir, "sisho-desk", script);
+    let sandbox = sandbox.trust_extension("desk");
 
     let output = sandbox.sisho(&["--list", "-v"], "");
     assert_eq!(code(&output), 0);
     let text = stdout(&output);
     let lines: Vec<&str> = text.lines().collect();
     assert_eq!(lines.len(), 2);
-    assert_eq!(lines[0], format!("desk      {}", ext_path.display()));
+    assert_eq!(
+        lines[0],
+        format!("desk      {} [allowed]", ext_path.display())
+    );
     assert_eq!(
         lines[1],
         "          v0.2.0  Desktop interface for Tomet vaults  [tui, interactive]"
@@ -235,17 +247,116 @@ echo "desk"
 }
 
 #[test]
+fn list_verbose_never_executes_untrusted_or_denied_extensions() {
+    let sandbox = Sandbox::new("list-verbose-gate");
+    let marker = sandbox.dir.join("info-executed");
+    let script = format!(
+        "#!/bin/sh\n\
+         if [ \"$1\" = \"--sisho-extension-info\" ]; then\n\
+             : > \"{}\"\n\
+             echo '{{\"schema_version\":1,\"word\":\"desk\",\"version\":\"0.2.0\",\"about\":\"Desktop interface\",\"capabilities\":{{\"tui\":true}}}}'\n\
+             exit 0\n\
+         fi\n",
+        marker.display()
+    );
+    let ext_path = make_script(&sandbox.dir, "sisho-desk", &script);
+
+    // 1. Untrusted: `sisho --list -v` must NOT run `--sisho-extension-info`
+    let out_untrusted = sandbox.sisho(&["--list", "-v"], "");
+    assert_eq!(code(&out_untrusted), 0);
+    assert!(
+        !marker.exists(),
+        "--sisho-extension-info must never run on an untrusted extension"
+    );
+    assert_eq!(
+        stdout(&out_untrusted).trim(),
+        format!("desk      {} [untrusted]", ext_path.display())
+    );
+
+    // 2. Denied: `sisho --list -v` must STILL NOT run `--sisho-extension-info`
+    assert_eq!(code(&sandbox.sisho(&["--deny", "desk"], "")), 0);
+    let out_denied = sandbox.sisho(&["--list", "-v"], "");
+    assert_eq!(code(&out_denied), 0);
+    assert!(
+        !marker.exists(),
+        "--sisho-extension-info must never run on a denied extension"
+    );
+    assert_eq!(
+        stdout(&out_denied).trim(),
+        format!("desk      {} [denied]", ext_path.display())
+    );
+
+    // 3. Allowed: `sisho --list -v` now queries `--sisho-extension-info`
+    assert_eq!(code(&sandbox.sisho(&["--allow", "desk"], "")), 0);
+    let out_allowed = sandbox.sisho(&["--list", "-v"], "");
+    assert_eq!(code(&out_allowed), 0);
+    assert!(
+        marker.exists(),
+        "--sisho-extension-info must run once extension is allowed"
+    );
+    let text_allowed = stdout(&out_allowed);
+    let lines: Vec<&str> = text_allowed.lines().collect();
+    assert_eq!(lines.len(), 2);
+    assert_eq!(
+        lines[0],
+        format!("desk      {} [allowed]", ext_path.display())
+    );
+}
+
+#[test]
+fn list_json_outputs_structured_entries_with_canonical_path_and_trust() {
+    let sandbox = Sandbox::new("list-json");
+    let script = r#"#!/bin/sh
+if [ "$1" = "--sisho-extension-info" ]; then
+    echo '{"schema_version":1,"word":"desk","version":"0.2.0","about":"Desktop interface","capabilities":{"tui":true}}'
+    exit 0
+fi
+"#;
+    let ext_path = make_script(&sandbox.dir, "sisho-desk", script);
+    let canonical = std::fs::canonicalize(&ext_path).unwrap();
+
+    // Untrusted JSON with -v: info must be null
+    let out_untrusted = sandbox.sisho(&["--list", "-v", "--json"], "");
+    assert_eq!(code(&out_untrusted), 0);
+    let parsed_untrusted: serde_json::Value =
+        serde_json::from_str(&stdout(&out_untrusted)).unwrap();
+    let arr = parsed_untrusted.as_array().unwrap();
+    assert_eq!(arr.len(), 1);
+    assert_eq!(arr[0]["word"], "desk");
+    assert_eq!(arr[0]["path"], ext_path.to_str().unwrap());
+    assert_eq!(arr[0]["canonical_path"], canonical.to_str().unwrap());
+    assert_eq!(arr[0]["status"], "active");
+    assert!(arr[0]["shadowed_by"].is_null());
+    assert_eq!(arr[0]["trust"], "untrusted");
+    assert!(arr[0]["info"].is_null());
+
+    // After allowing: info is populated when -v is passed
+    assert_eq!(code(&sandbox.sisho(&["--allow", "desk"], "")), 0);
+    let out_allowed = sandbox.sisho(&["--list", "-v", "--json"], "");
+    assert_eq!(code(&out_allowed), 0);
+    let parsed_allowed: serde_json::Value = serde_json::from_str(&stdout(&out_allowed)).unwrap();
+    let arr_allowed = parsed_allowed.as_array().unwrap();
+    assert_eq!(arr_allowed[0]["trust"], "allowed");
+    assert_eq!(arr_allowed[0]["info"]["version"], "0.2.0");
+    assert_eq!(arr_allowed[0]["info"]["about"], "Desktop interface");
+}
+
+#[test]
 fn list_verbose_fallback_when_not_supporting_info() {
     let sandbox = Sandbox::new("list-verbose-fallback");
     let script = "#!/bin/sh\nexit 1\n";
     let ext_path = make_script(&sandbox.dir, "sisho-desk", script);
+    let sandbox = sandbox.trust_extension("desk");
 
     let output = sandbox.sisho(&["--list", "--verbose"], "");
     assert_eq!(code(&output), 0);
     let text = stdout(&output);
     let lines: Vec<&str> = text.lines().collect();
     assert_eq!(lines.len(), 1);
-    assert_eq!(lines[0], format!("desk      {}", ext_path.display()));
+    assert_eq!(
+        lines[0],
+        format!("desk      {} [allowed]", ext_path.display())
+    );
 }
 
 #[test]
@@ -253,6 +364,7 @@ fn list_verbose_times_out_and_discards_output_when_hanging() {
     let sandbox = Sandbox::new("list-verbose-timeout");
     let script = "#!/bin/sh\nwhile :; do :; done\n";
     let ext_path = make_script(&sandbox.dir, "sisho-desk", script);
+    let sandbox = sandbox.trust_extension("desk");
 
     let start = std::time::Instant::now();
     let output = sandbox.sisho(&["--list", "-v"], "");
@@ -265,5 +377,46 @@ fn list_verbose_times_out_and_discards_output_when_hanging() {
     let text = stdout(&output);
     let lines: Vec<&str> = text.lines().collect();
     assert_eq!(lines.len(), 1);
-    assert_eq!(lines[0], format!("desk      {}", ext_path.display()));
+    assert_eq!(
+        lines[0],
+        format!("desk      {} [allowed]", ext_path.display())
+    );
+}
+
+#[test]
+fn list_verbose_passes_sisho_config_and_data_dirs_to_extension_info() {
+    let sandbox = Sandbox::new("list-verbose-dirs");
+    let captured = sandbox.dir.join("captured-dirs");
+    let script = format!(
+        "#!/bin/sh\n\
+         if [ \"$1\" = \"--sisho-extension-info\" ]; then\n\
+             printf '%s\\n%s\\n' \"$SISHO_CONFIG_DIR\" \"$SISHO_DATA_DIR\" > \"{}\"\n\
+             echo '{{\"schema_version\":1,\"word\":\"desk\",\"version\":\"0.2.0\",\"about\":\"Desktop interface\"}}'\n\
+             exit 0\n\
+         fi\n",
+        captured.display()
+    );
+    make_script(&sandbox.dir, "sisho-desk", &script);
+    let sandbox = sandbox.trust_extension("desk");
+
+    let xdg_cfg = sandbox.dir.join("xdg-cfg");
+    let xdg_data = sandbox.dir.join("xdg-data");
+    let output = sandbox.sisho_with(
+        &["--list", "-v"],
+        "",
+        &[
+            ("XDG_CONFIG_HOME", xdg_cfg.to_str().unwrap()),
+            ("XDG_DATA_HOME", xdg_data.to_str().unwrap()),
+        ],
+    );
+    assert_eq!(code(&output), 0);
+    let recorded = fs::read_to_string(&captured).unwrap();
+    let lines: Vec<&str> = recorded.lines().collect();
+    assert_eq!(
+        lines,
+        vec![
+            xdg_cfg.join("sisho/desk").to_str().unwrap(),
+            xdg_data.join("sisho/desk").to_str().unwrap(),
+        ]
+    );
 }

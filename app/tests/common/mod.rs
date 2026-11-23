@@ -50,6 +50,23 @@ impl Sandbox {
         self.tool("tomet").tool("twrit").tool("catasto")
     }
 
+    /// Path to the sandbox-isolated `trust.json` file.
+    pub fn trust_file(&self) -> PathBuf {
+        self.dir.join("trust.json")
+    }
+
+    /// Mark an installed extension `<word>` in this sandbox as `allowed` via `sisho --allow`.
+    pub fn trust_extension(self, word: &str) -> Self {
+        let output = self.sisho(&["--allow", word], "");
+        assert_eq!(
+            code(&output),
+            0,
+            "failed to allow extension {word}: {}",
+            stderr(&output)
+        );
+        self
+    }
+
     /// Run `sisho` with only this directory on `PATH`.
     pub fn sisho(&self, args: &[&str], fail: &str) -> Output {
         self.sisho_with(args, fail, &[])
@@ -62,6 +79,7 @@ impl Sandbox {
             .current_dir(&self.dir)
             .env_clear()
             .env("PATH", &self.dir)
+            .env("SISHO_TRUST_FILE", self.trust_file())
             .env("FAKE_FAIL", fail)
             .envs(env.iter().copied())
             .output()
