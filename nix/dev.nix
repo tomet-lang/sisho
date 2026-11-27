@@ -8,6 +8,7 @@
   catasto,
   sisho-board,
   sisho-desk,
+  sisho-audit,
   ...
 }:
 let
@@ -28,8 +29,10 @@ mkShell {
     tomet-lsp
     twrit
     catasto
+    sisho-audit
     sisho-board
     sisho-desk
+
     just
 
     #= Build

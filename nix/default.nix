@@ -22,6 +22,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
       shelfPkgs = inputs.tomet-shelf.packages.${system};
       boardPkgs = inputs.sisho-board.packages.${system};
       deskPkgs = inputs.sisho-desk.packages.${system};
+      auditPkgs = inputs.sisho-audit.packages.${system};
       catastoPkgs = inputs.catasto.packages.${system};
 
       # Several packages as one: the `bin/` of each in a single directory.
@@ -37,16 +38,16 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         default = sisho;
         sisho = pkgs.callPackage ./pkgs/sisho.nix { inherit craneLib; };
 
-        # What CI builds and sends to Cachix (.github/workflows/nix-ci.yml). Including `toolchain`
-        # ensures its constituent tools are also cached for `sisho`'s pinned revisions.
+        # What CI builds and sends to Cachix (.github/workflows/nix-ci.yml). Including `full`
+        # ensures every constituent tool across all bundles is cached for `sisho`'s pinned revisions.
         ci = pkgs.linkFarm "ci" [
           {
             name = "sisho";
             path = sisho;
           }
           {
-            name = "toolchain";
-            path = toolchain;
+            name = "full";
+            path = full;
           }
         ];
 
@@ -57,15 +58,39 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         inherit (catastoPkgs) catasto;
         inherit (boardPkgs) sisho-board;
         inherit (deskPkgs) sisho-desk;
+        inherit (auditPkgs) sisho-audit;
 
-        # The core: what `sisho check` and `sisho fix` run. Add the rest with `combine`.
-        toolchain = combine [
-          sisho
+        # Minimal starter bundle for newcomers and PKM beginners.
+        starter = combine [
           tomet
-          twrit
-          catasto
+          tomet-lsp
+          sisho
           sisho-board
           sisho-desk
+        ];
+
+        # Ecosystem toolchain for Tomet repositories (core CLI, LSP, shelf, and audit).
+        toolchain = combine [
+          tomet
+          tomet-lsp
+          tomet-shelf
+          twrit
+          catasto
+          sisho
+          sisho-audit
+        ];
+
+        # Full ecosystem bundle (`starter` + `toolchain`).
+        full = combine [
+          tomet
+          tomet-lsp
+          twrit
+          catasto
+          tomet-shelf
+          sisho
+          sisho-board
+          sisho-desk
+          sisho-audit
         ];
       };
 
@@ -80,6 +105,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         inherit (catastoPkgs) catasto;
         inherit (boardPkgs) sisho-board;
         inherit (deskPkgs) sisho-desk;
+        inherit (auditPkgs) sisho-audit;
       };
 
       treefmt = import ./formatter.nix {

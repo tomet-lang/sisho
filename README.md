@@ -75,10 +75,16 @@ Nothing in `sisho` needs Nix: it finds `tomet` and `twrit` on `PATH`, however th
 inputs.sisho.url = "github:tomet-lang/sisho";
 
 # in a dev shell:
-packages = [ sisho.packages.${system}.toolchain ];   # sisho, tomet, twrit, catasto, sisho-board and sisho-desk
+packages = [ sisho.packages.${system}.toolchain ];   # tomet, tomet-lsp, tomet-shelf, twrit, catasto, sisho and sisho-audit
 ```
 
-Packages are `sisho`, `tomet`, `tomet-lsp`, `twrit`, `catasto`, `tomet-shelf`, `sisho-board` and `sisho-desk`. `toolchain` bundles the core: `sisho`, `tomet`, `twrit`, `catasto`, `sisho-board` and `sisho-desk`. To choose your own set, as with fenix:
+Packages are `sisho`, `tomet`, `tomet-lsp`, `twrit`, `catasto`, `tomet-shelf`, `sisho-board`, `sisho-desk` and `sisho-audit`:
+
+- `starter`: `tomet`, `sisho`, `sisho-board` and `sisho-desk` (trying Tomet / PKM workflows).
+- `toolchain`: `tomet`, `tomet-lsp`, `tomet-shelf`, `twrit`, `catasto`, `sisho` and `sisho-audit` (Tomet ecosystem repositories and CI).
+- `full`: all packages (`starter` + `toolchain`).
+
+To choose your own set, as with fenix:
 
 ```nix
 sisho.legacyPackages.${system}.combine [
