@@ -1,0 +1,11 @@
+[package]
+name                   = "sisho-tui"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+description            = "Shared Ratatui chrome, theme, and modal primitives for sisho TUI tools."
+publish                = false
+
+[dependencies]
+ratatui = { workspace = true }

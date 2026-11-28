@@ -6,6 +6,7 @@ members = [
   "crates/sisho-tools",
   "crates/sisho-serve",
   "crates/sisho-sdk",
+  "crates/sisho-tui",
 ]
 default-members = ["app"]
 
@@ -21,6 +22,7 @@ sisho-run   = { path = "crates/sisho-run" }
 sisho-sdk   = { path = "crates/sisho-sdk" }
 sisho-serve = { path = "crates/sisho-serve" }
 sisho-tools = { path = "crates/sisho-tools" }
+sisho-tui   = { path = "crates/sisho-tui" }
 #--- Tomet ---
 tomet-ast         = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-ast-parser  = { git = "https://github.com/tomet-lang/tomet.git" }
@@ -37,6 +39,7 @@ axum = { version = "0.8", default-features = false, features = [
 clap = { version = "4.6", features = ["derive"] }
 jobserver = "0.1"
 mimalloc = { version = "0.1", default-features = false }
+ratatui = "0.29"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 tokio = { version = "1", features = ["rt-multi-thread", "net"] }
