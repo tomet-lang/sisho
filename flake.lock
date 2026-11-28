@@ -1112,11 +1112,11 @@
         "twrit": []
       },
       "locked": {
-        "lastModified": 1795857458,
-        "narHash": "sha256-sjxT29kJwtG00Dvqh/cJTJqZ44OrwZ1chNeYgr2XZHQ=",
+        "lastModified": 1795868606,
+        "narHash": "sha256-0fPSVz5EOJD9gysU+iUFPi/dHEz4z38YbBH9RJc6q/U=",
         "owner": "tomet-lang",
         "repo": "sisho-board",
-        "rev": "940b4f8b228e856221321c98bc85c158dff23da1",
+        "rev": "a4f04c68c6411425a87587bef888db479cdf9330",
         "type": "github"
       },
       "original": {
