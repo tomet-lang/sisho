@@ -195,6 +195,14 @@ tomet / twrit / tandr を束ねるオーケストラ CLI。Rust でいう cargo�
 - Nix では `toolchain` と dev shell に足す。入力は、`inputs.sisho.follows = ""` で切る(tomet・twrit と同じ)。fs-catasto の dev shell は sisho を入力に持つので、輪になるが、ロックの中で解ける。catasto の包みは、利用者の `PATH` の後ろに `git` を足すので、git が入っていない環境でも `catasto sync` が動く。
 - sisho 自身も、`writ` の語彙を catasto で取る(`catasto.ctmt` の `::upstreams`)。手でコピーしていた `writ.vocabulary.tmt` は、管理対象のファイルになる。
 
+===[ tetch を足す ]
+
+- `tetch` を sisho が知るツールに足す。`$cache.command` / `::cache` に書かれた外部コマンドの実行とキャッシュの検証を隔離層として担い、`tomet`・`twrit`・`catasto` を pure に保つツール。
+- `check` に `tetch check` を足す。読み取りだけで外部コマンドを一切実行せず、入力のハッシュやキャッシュの整合性にずれがあれば 1 で終わる。`$cache.command` / `::cache` がないリポジトリでは検査するものがなく `tetch: ok (0 entries)` として 0 で終わる。だから sisho は条件を持たない。「各ツールが自分で、見るものがあるかを決める」という原則のままで、`sisho-tools` に `std::fs` も入らない。
+- 最低の版は 0.1.0(`--version` を最初から返している)。`Tool::ALL` の最後に足し、報告の並びと既存の添字は動かさない。
+- `fix` に `tetch sync` は入れない。`tetch sync` は外部コマンドを実行する操作であり、`sisho` の `fix` が自動実行する範囲を超えているため(`catasto sync` を `fix` に入れないのと同じ)。必要なときは `sisho tetch sync`(および承認は `sisho tetch allow`)で届く。
+- Nix では `packages`・`toolchain`・`full`・dev shell に足す。入力は、`inputs.sisho.follows = ""`・`inputs.tomet.follows = ""`・`inputs.twrit.follows = ""`・`inputs.tomet-shelf.follows = ""` で切る。
+
 ==[ 移すときに直す場所 ]
 
 twrit の AGENTS.md と tomet の CLI のコードから見えた依存。

@@ -48,6 +48,30 @@ fn fix_never_runs_refactor() {
 }
 
 #[test]
+fn fix_never_runs_tetch_sync() {
+    // `tetch sync` executes external commands, so `sisho fix` must never run it.
+    let sandbox = Sandbox::new("no-tetch-sync").all_tools();
+    let output = sandbox.sisho(&["fix", "--verbose"], "");
+    let text = stdout(&output);
+    assert_eq!(code(&output), 0, "{text}");
+    assert!(!text.contains("tetch sync"), "{text}");
+    assert!(!text.contains("✓ tetch"), "{text}");
+    assert!(text.contains("all 3 steps passed"), "{text}");
+}
+
+#[test]
+fn fix_rejects_tetch_older_than_minimum_without_writing() {
+    let sandbox = Sandbox::new("fix-old-tetch").all_tools();
+    let output = sandbox.sisho_with(&["fix"], "", &[("FAKE_VERSION_TETCH", "0.0.9")]);
+    let text = stdout(&output);
+
+    assert_eq!(code(&output), 1, "{text}");
+    assert!(text.contains("✗ tetch version"), "{text}");
+    assert!(text.contains("nothing was changed"), "{text}");
+    assert!(!text.contains("twrit check --fix"), "{text}");
+}
+
+#[test]
 fn fix_writes_nothing_with_a_tool_older_than_sisho_works_with() {
     let sandbox = Sandbox::new("fix-old").all_tools();
     let output = sandbox.sisho_with(&["fix"], "", &[("FAKE_VERSION_TWRIT", "0.1.0")]);

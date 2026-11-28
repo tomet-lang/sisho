@@ -1,0 +1,104 @@
+::kind(api)
+
+::meta(crate: sisho-tui, dependencies: (), dependents: ())
+
+=[sisho-tui]
+
+Shared Ratatui chrome, theme, and modal primitives for `sisho` TUI tools.
+
+This crate provides a minimal, consistent visual shell across `sisho` terminal
+interfaces without coupling to any application state or event loop:
+
+- `theme`: \[`Theme`\] palette and reusable pane/tab/keybinding styles.
+- `shell`: \[`ShellLayout`\] standard header/body/footer vertical split.
+- `header`: \[`HeaderBar`\] and \[`TabItem`\] top bar with optional context and badges.
+- `footer`: \[`FooterBar`\], \[`KeyHint`\], \[`StatusLine`\], and \[`StatusKind`\] two-line footer.
+- `modal`: \[`centered_rect`\], \[`ModalFrame`\], \[`HelpSection`\], \[`HelpRow`\], and \[`draw_help_modal`\].
+
+==[Module footer]
+
+Two-line bottom footer bar showing key hints and status or summary text.
+
+===[Structs]
+
+====[struct StatusLine]
+
+Status message displayed on the second line of \[`FooterBar`\].
+
+====[struct KeyHint]
+
+A single keybinding hint rendered on the first line of \[`FooterBar`\].
+
+====[struct FooterBar]
+
+Two-line footer widget rendering keybinding hints above a status or summary line.
+
+===[Enums]
+
+====[enum StatusKind]
+
+Severity level for a footer status message.
+
+==[Module header]
+
+Top header bar widget with application name, optional context, and tab strip.
+
+===[Structs]
+
+====[struct TabItem]
+
+A single selectable view tab rendered inside \[`HeaderBar`\].
+
+====[struct HeaderBar]
+
+Top chrome bar displaying the application title, optional context, and view tabs.
+
+==[Module modal]
+
+Centered modal dialog frame and structured keybinding help overlay.
+
+===[Structs]
+
+====[struct ModalFrame]
+
+Centered, bordered modal container that clears its background and returns its inner area.
+
+====[struct HelpRow]
+
+A single keybinding entry inside a \[`HelpSection`\].
+
+====[struct HelpSection]
+
+A titled group of \[`HelpRow`\] items rendered inside \[`draw_help_modal`\].
+
+===[Functions]
+
+====[fn centered_rect]
+
+Computes a centered rectangle occupying `percent_x` by `percent_y` of `area`.
+
+Percentages above `100` are clamped to `100`.
+
+====[fn draw_help_modal]
+
+Renders a centered keybinding help overlay from `sections` and an optional `footer_hint`.
+
+==[Module shell]
+
+Top-level vertical layout splitting a screen into header, body, and footer regions.
+
+===[Structs]
+
+====[struct ShellLayout]
+
+Standard three-row chrome layout shared by `sisho` TUI screens.
+
+==[Module theme]
+
+Color palette and widget styling primitives for `sisho` TUI applications.
+
+===[Structs]
+
+====[struct Theme]
+
+Color palette and reusable widget styles shared across `sisho` TUI tools.

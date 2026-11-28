@@ -75,7 +75,10 @@ fn a_name_that_is_not_a_tool_is_a_usage_error_that_lists_the_tools() {
         text.contains("`cargo` is neither a command nor a tool"),
         "{text}"
     );
-    assert!(text.contains("tools: tomet, twrit"), "{text}");
+    assert!(
+        text.contains("tools: tomet, twrit, catasto, tetch, shelf"),
+        "{text}"
+    );
 }
 
 #[test]
@@ -88,13 +91,37 @@ fn an_unknown_verb_is_a_usage_error_too() {
 fn the_help_names_every_tool() {
     let sandbox = Sandbox::new("help").all_tools();
     let text = stdout(&sandbox.sisho(&["--help"], ""));
-    assert!(text.contains("Tools: tomet, twrit"), "{text}");
+    assert!(
+        text.contains("Tools: tomet, twrit, catasto, tetch, shelf"),
+        "{text}"
+    );
     assert!(
         text.contains(
             "Extensions: a program named `sisho-<word>` on PATH runs as `sisho <word>`, for example `sisho desk`."
         ),
         "{text}"
     );
+}
+
+#[test]
+fn tetch_passthrough_preserves_args_flags_and_exit_code() {
+    let sandbox = Sandbox::new("tetch-passthrough").all_tools();
+
+    let ver = sandbox.sisho(&["tetch", "--version"], "");
+    assert_eq!(code(&ver), 0);
+    assert_eq!(stdout(&ver), "tetch 9.9.9\n");
+
+    let args = sandbox.sisho(&["tetch", "sync", "--dry-run", "vault"], "");
+    assert_eq!(code(&args), 0);
+    assert_eq!(stdout(&args), "args: sync --dry-run vault\n");
+
+    let exit = sandbox.sisho(&["tetch", "exit-126"], "");
+    assert_eq!(code(&exit), 126);
+
+    let missing = Sandbox::new("tetch-missing").tool("tomet");
+    let out_missing = missing.sisho(&["tetch", "check"], "");
+    assert_eq!(code(&out_missing), 127);
+    assert!(stderr(&out_missing).contains("tetch is not on PATH"));
 }
 
 #[test]
@@ -302,6 +329,7 @@ fn built_in_commands_and_known_programs_win_over_extensions() {
     let sandbox = Sandbox::new("ext-precedence")
         .tool("sisho-tomet")
         .tool("sisho-twrit")
+        .tool("sisho-tetch")
         .tool("sisho-check");
 
     // `sisho tomet` must look for `tomet`, not fallback to `sisho-tomet`.
@@ -317,6 +345,12 @@ fn built_in_commands_and_known_programs_win_over_extensions() {
     assert_eq!(code(&output), 127);
     assert_eq!(stdout(&output), "");
     assert!(stderr(&output).contains("twrit is not on PATH"));
+
+    // `sisho tetch` must similarly look for `tetch`, not `sisho-tetch`.
+    let output = sandbox.sisho(&["tetch", "check", "."], "");
+    assert_eq!(code(&output), 127);
+    assert_eq!(stdout(&output), "");
+    assert!(stderr(&output).contains("tetch is not on PATH"));
 
     // `sisho check` is a built-in command parsed by clap; it must run sisho's
     // check pipeline (reporting missing tools and exiting 1), never `sisho-check`.

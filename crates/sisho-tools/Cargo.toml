@@ -3,7 +3,7 @@ name              = "sisho-tools"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description       = "What sisho knows about tomet, twrit and tandr: which commands each verb runs."
+description       = "What sisho knows about tomet, twrit, catasto, tetch and tandr: which commands each verb runs."
 publish           = false
 
 [dependencies]

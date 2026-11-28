@@ -98,6 +98,7 @@ fn ignores_files_with_invalid_extension_words() {
 fn marks_names_shadowed_by_builtins_or_known_tools() {
     let sandbox = Sandbox::new("list-precedence");
     let path_check = make_file(&sandbox.dir, "sisho-check", true);
+    let path_tetch = make_file(&sandbox.dir, "sisho-tetch", true);
     let path_tomet = make_file(&sandbox.dir, "sisho-tomet", true);
     let path_desk = make_file(&sandbox.dir, "sisho-desk", true);
 
@@ -105,9 +106,9 @@ fn marks_names_shadowed_by_builtins_or_known_tools() {
     assert_eq!(code(&output), 0);
     let text = stdout(&output);
     let lines: Vec<&str> = text.lines().collect();
-    assert_eq!(lines.len(), 3);
+    assert_eq!(lines.len(), 4);
 
-    // Sorted alphabetically: check, desk, tomet
+    // Sorted alphabetically: check, desk, tetch, tomet
     assert!(lines[0].starts_with("check "));
     assert!(lines[0].contains(&path_check.display().to_string()));
     assert!(lines[0].ends_with("(shadowed by builtin)"));
@@ -116,9 +117,13 @@ fn marks_names_shadowed_by_builtins_or_known_tools() {
     assert!(lines[1].contains(&path_desk.display().to_string()));
     assert!(!lines[1].contains("(shadowed"));
 
-    assert!(lines[2].starts_with("tomet "));
-    assert!(lines[2].contains(&path_tomet.display().to_string()));
+    assert!(lines[2].starts_with("tetch "));
+    assert!(lines[2].contains(&path_tetch.display().to_string()));
     assert!(lines[2].ends_with("(shadowed by builtin)"));
+
+    assert!(lines[3].starts_with("tomet "));
+    assert!(lines[3].contains(&path_tomet.display().to_string()));
+    assert!(lines[3].ends_with("(shadowed by builtin)"));
 }
 
 #[test]

@@ -80,6 +80,13 @@
       inputs.tomet-shelf.follows = "";
       inputs.sisho.follows = "";
     };
+    tetch = {
+      url = "github:tomet-lang/tetch";
+      inputs.sisho.follows = "";
+      inputs.tomet.follows = "";
+      inputs.twrit.follows = "";
+      inputs.tomet-shelf.follows = "";
+    };
   };
 
   outputs = inputs: import ./nix inputs;

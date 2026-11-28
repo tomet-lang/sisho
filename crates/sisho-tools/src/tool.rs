@@ -10,11 +10,12 @@ pub enum Tool {
     Tomet,
     Twrit,
     Catasto,
+    Tetch,
 }
 
 impl Tool {
     /// Every tool, in the order plans list them.
-    pub const ALL: [Tool; 3] = [Tool::Tomet, Tool::Twrit, Tool::Catasto];
+    pub const ALL: [Tool; 4] = [Tool::Tomet, Tool::Twrit, Tool::Catasto, Tool::Tetch];
 
     /// The tool's name, which is also its program name on `PATH`.
     pub fn name(self) -> &'static str {
@@ -22,6 +23,7 @@ impl Tool {
             Tool::Tomet => "tomet",
             Tool::Twrit => "twrit",
             Tool::Catasto => "catasto",
+            Tool::Tetch => "tetch",
         }
     }
 
@@ -33,18 +35,19 @@ impl Tool {
     /// The oldest version of the tool that `sisho` works with.
     ///
     /// `tomet` and `twrit` gave `--version` its meaning at 0.2.0, so one that
-    /// cannot report a version is older than that. `catasto` has reported one
-    /// since its first, 0.1.0. When `sisho` comes to rely on something a later
-    /// version added, this is where that is said: `tomet` 0.4.0 is the first
-    /// whose conversion commands take a directory, `-` and `--dry-run` alike,
-    /// which `sisho convert` leaves to them, and 0.5.0 the first with
-    /// `check-links` since it came back from `sisho`, and its `--json`, which
-    /// `sisho-board` reads.
+    /// cannot report a version is older than that. `catasto` and `tetch` have
+    /// reported one since their first release, 0.1.0. When `sisho` comes to
+    /// rely on something a later version added, this is where that is said:
+    /// `tomet` 0.4.0 is the first whose conversion commands take a directory,
+    /// `-` and `--dry-run` alike, which `sisho convert` leaves to them, and
+    /// 0.5.0 the first with `check-links` since it came back from `sisho`, and
+    /// its `--json`, which `sisho-board` reads.
     pub const fn min_version(self) -> Version {
         match self {
             Tool::Tomet => Version::new(0, 5, 0),
             Tool::Twrit => Version::new(0, 2, 0),
             Tool::Catasto => Version::new(0, 1, 0),
+            Tool::Tetch => Version::new(0, 1, 0),
         }
     }
 

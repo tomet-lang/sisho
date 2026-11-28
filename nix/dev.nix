@@ -6,6 +6,7 @@
   tomet-lsp,
   twrit,
   catasto,
+  tetch,
   sisho-board,
   sisho-desk,
   sisho-audit,
@@ -30,6 +31,7 @@ mkShell {
     tomet-lsp
     twrit
     catasto
+    tetch
     sisho-audit
     sisho-board
     sisho-desk

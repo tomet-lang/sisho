@@ -1,7 +1,7 @@
 # Sisho development tasks.
 
 # Tools in the Tomet ecosystem pinned as flake inputs.
-tool_inputs := "catasto sisho-board sisho-desk tomet tomet-shelf twrit"
+tool_inputs := "catasto sisho-board sisho-desk tetch tomet tomet-shelf twrit"
 
 default:
     @just --list
@@ -12,7 +12,7 @@ build:
 test:
     cargo test --workspace
 
-# Update ecosystem tool inputs in flake.lock (defaults to all tools: catasto, sisho-desk, tomet, tomet-shelf, twrit).
+# Update ecosystem tool inputs in flake.lock (defaults to all tools: catasto, sisho-desk, tetch, tomet, tomet-shelf, twrit).
 update-tools *inputs:
     nix flake update {{ replace(if inputs == "" { tool_inputs } else { inputs }, "fs-catasto", "catasto") }}
 

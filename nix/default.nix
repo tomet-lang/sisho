@@ -25,6 +25,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
       auditPkgs = inputs.sisho-audit.packages.${system};
       historyPkgs = inputs.sisho-history.packages.${system};
       catastoPkgs = inputs.catasto.packages.${system};
+      tetchPkgs = inputs.tetch.packages.${system};
 
       # Several packages as one: the `bin/` of each in a single directory.
       combine =
@@ -57,6 +58,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         inherit (twritPkgs) twrit;
         inherit (shelfPkgs) tomet-shelf;
         inherit (catastoPkgs) catasto;
+        inherit (tetchPkgs) tetch;
         inherit (boardPkgs) sisho-board;
         inherit (deskPkgs) sisho-desk;
         inherit (auditPkgs) sisho-audit;
@@ -78,6 +80,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
           tomet-shelf
           twrit
           catasto
+          tetch
           sisho
           sisho-audit
         ];
@@ -88,6 +91,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
           tomet-lsp
           twrit
           catasto
+          tetch
           tomet-shelf
           sisho
           sisho-board
@@ -106,6 +110,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         inherit (tometPkgs) tomet tomet-lsp;
         inherit (twritPkgs) twrit;
         inherit (catastoPkgs) catasto;
+        inherit (tetchPkgs) tetch;
         inherit (boardPkgs) sisho-board;
         inherit (deskPkgs) sisho-desk;
         inherit (auditPkgs) sisho-audit;

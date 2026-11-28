@@ -25,8 +25,10 @@ pub fn check_links_step(path: &Path) -> Step {
 /// Read-only, so a caller may run them at the same time. Plan order is the
 /// order they are reported in. It is the gate each repository's `docs-check`
 /// has been spelling out by hand: the documents parse, they are formatted,
-/// what they export is up to date, the repository's written rules hold, and
-/// the files `catasto` manages are as its lock says.
+/// what they export is up to date, the repository's written rules hold, the
+/// files `catasto` manages are as its lock says, and cached external commands
+/// verified by `tetch` are consistent and fresh without executing any
+/// command.
 pub fn check_steps(path: &Path) -> Vec<Step> {
     vec![
         step(Tool::Tomet, &["check"], path),
@@ -34,6 +36,7 @@ pub fn check_steps(path: &Path) -> Vec<Step> {
         step(Tool::Tomet, &["export", "--check"], path),
         step(Tool::Twrit, &["check"], path),
         step(Tool::Catasto, &["check"], path),
+        step(Tool::Tetch, &["check"], path),
     ]
 }
 
@@ -49,6 +52,9 @@ pub fn check_steps(path: &Path) -> Vec<Step> {
 /// and puts a managed file back to what the lock says, which no step of `fix`
 /// does to a file someone may have edited. Whether it joins is open (see the
 /// design memo).
+///
+/// `tetch sync` is not here either. It executes external commands declared in
+/// `$cache.command` / `::cache` entries, which `sisho fix` never runs.
 pub fn fix_steps(path: &Path) -> Vec<Step> {
     vec![
         step(Tool::Twrit, &["check", "--fix"], path),

@@ -13,7 +13,7 @@ fn check_passes_when_every_tool_passes() {
     let text = stdout(&output);
     assert_eq!(code(&output), 0, "{text}");
     assert!(
-        text.contains("tomet 9.9.9, twrit 9.9.9, catasto 9.9.9"),
+        text.contains("tomet 9.9.9, twrit 9.9.9, catasto 9.9.9, tetch 9.9.9"),
         "{text}"
     );
     assert!(text.contains("✓ tomet check"), "{text}");
@@ -21,7 +21,8 @@ fn check_passes_when_every_tool_passes() {
     assert!(text.contains("✓ tomet export --check"), "{text}");
     assert!(text.contains("✓ twrit check"), "{text}");
     assert!(text.contains("✓ catasto check"), "{text}");
-    assert!(text.contains("all 5 steps passed"), "{text}");
+    assert!(text.contains("✓ tetch check"), "{text}");
+    assert!(text.contains("all 6 steps passed"), "{text}");
 }
 
 #[test]
@@ -37,7 +38,9 @@ fn a_failing_step_fails_the_run_and_shows_why_but_stops_nothing() {
     assert!(text.contains("✓ tomet check"), "{text}");
     assert!(text.contains("✓ tomet export --check"), "{text}");
     assert!(text.contains("✓ twrit check"), "{text}");
-    assert!(text.contains("1 of 5 steps did not pass"), "{text}");
+    assert!(text.contains("✓ catasto check"), "{text}");
+    assert!(text.contains("✓ tetch check"), "{text}");
+    assert!(text.contains("1 of 6 steps did not pass"), "{text}");
 }
 
 #[test]
@@ -93,6 +96,7 @@ fn json_reports_every_step_and_whether_the_run_passed() {
             "tomet export --check",
             "twrit check",
             "catasto check",
+            "tetch check",
         ]
     );
     assert_eq!(steps[0]["status"], "passed");
@@ -137,7 +141,7 @@ fn a_tool_older_than_sisho_works_with_is_a_failed_step_first_in_the_report() {
         "{text}"
     );
     assert!(text.contains("✓ twrit check"), "{text}");
-    assert!(text.contains("1 of 6 steps did not pass"), "{text}");
+    assert!(text.contains("1 of 7 steps did not pass"), "{text}");
 }
 
 #[test]
@@ -182,7 +186,37 @@ fn json_says_what_each_tool_needs_and_lists_a_version_problem_as_a_step() {
     assert_eq!(json["tools"][0]["needs"], "0.5.0");
     assert_eq!(json["tools"][1]["needs"], "0.2.0");
     assert_eq!(json["tools"][1]["version"], "twrit 0.1.5");
+    assert_eq!(json["tools"][2]["needs"], "0.1.0");
+    assert_eq!(json["tools"][3]["needs"], "0.1.0");
     assert_eq!(json["ok"], false);
     assert_eq!(json["steps"][0]["name"], "twrit version");
     assert_eq!(json["steps"][0]["status"], "failed");
+}
+
+#[test]
+fn tetch_check_failure_fails_the_run_and_is_gated_by_version() {
+    let sandbox = Sandbox::new("tetch-check").all_tools();
+
+    // Failing `tetch check` exits 1 without stopping the other checks.
+    let output = sandbox.sisho(&["check"], "tetch:check");
+    let text = stdout(&output);
+    assert_eq!(code(&output), 1, "{text}");
+    assert!(text.contains("✗ tetch check"), "{text}");
+    assert!(text.contains("boom from tetch check"), "{text}");
+    assert!(text.contains("✓ tomet check"), "{text}");
+    assert!(text.contains("1 of 6 steps did not pass"), "{text}");
+
+    // Version below 0.1.0 is rejected as `tetch version`.
+    let old = sandbox.sisho_with(&["check"], "", &[("FAKE_VERSION_TETCH", "0.0.9")]);
+    let old_text = stdout(&old);
+    assert_eq!(code(&old), 1, "{old_text}");
+    assert!(old_text.contains("✗ tetch version"), "{old_text}");
+    assert!(
+        old_text.contains("tetch 0.0.9 is older than sisho needs (0.1.0 or newer): update tetch"),
+        "{old_text}"
+    );
+
+    // Exactly 0.1.0 passes.
+    let ok = sandbox.sisho_with(&["check"], "", &[("FAKE_VERSION_TETCH", "0.1.0")]);
+    assert_eq!(code(&ok), 0, "{}", stdout(&ok));
 }

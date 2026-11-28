@@ -20,6 +20,7 @@ fn check_runs_these_commands_in_this_order() {
             "tomet export --check vault",
             "twrit check vault",
             "catasto check vault",
+            "tetch check vault",
         ]
     );
 }
@@ -34,6 +35,14 @@ fn fix_generates_before_the_export_and_formats_after_it() {
             "tomet format -i vault",
         ]
     );
+}
+
+#[test]
+fn fix_excludes_catasto_and_tetch_sync() {
+    for step in fix_steps(Path::new(".")) {
+        assert_ne!(step.program(), "catasto", "{}", step.command_line());
+        assert_ne!(step.program(), "tetch", "{}", step.command_line());
+    }
 }
 
 #[test]
@@ -77,6 +86,7 @@ fn step_names_say_what_the_step_does() {
             "tomet export --check",
             "twrit check",
             "catasto check",
+            "tetch check",
         ]
     );
 }
@@ -97,6 +107,7 @@ fn programs_are_found_by_word() {
     assert_eq!(program("tomet"), Some(Tool::Tomet.as_program()));
     assert_eq!(program("twrit"), Some(Tool::Twrit.as_program()));
     assert_eq!(program("catasto"), Some(Tool::Catasto.as_program()));
+    assert_eq!(program("tetch"), Some(Tool::Tetch.as_program()));
     assert_eq!(program("shelf"), Some(SHELF));
     assert_eq!(program("cargo"), None);
 }
@@ -206,13 +217,17 @@ mod versions {
     }
 
     #[test]
-    fn twrit_needs_at_least_0_2_0_and_catasto_0_1_0() {
+    fn twrit_needs_at_least_0_2_0_and_catasto_and_tetch_0_1_0() {
         assert_eq!(Tool::Twrit.min_version(), v(0, 2, 0));
         assert_eq!(Tool::Catasto.min_version(), v(0, 1, 0));
+        assert_eq!(Tool::Tetch.min_version(), v(0, 1, 0));
         assert!(Tool::Twrit.judge(Some("twrit 0.2.0")).is_fine());
         assert!(!Tool::Twrit.judge(Some("twrit 0.1.0")).is_fine());
         assert!(Tool::Catasto.judge(Some("catasto 0.1.0")).is_fine());
         assert!(!Tool::Catasto.judge(None).is_fine());
+        assert!(Tool::Tetch.judge(Some("tetch 0.1.0")).is_fine());
+        assert!(!Tool::Tetch.judge(Some("tetch 0.0.9")).is_fine());
+        assert!(!Tool::Tetch.judge(None).is_fine());
     }
 
     /// `sisho convert` leaves directories, `-` and `--dry-run` to `tomet`,
