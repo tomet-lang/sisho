@@ -904,11 +904,11 @@
         "twrit": []
       },
       "locked": {
-        "lastModified": 1795813154,
-        "narHash": "sha256-1xJDbcXt20Lk65mWCtN1jbw+evVKSOQL9LU0UHTDm6o=",
+        "lastModified": 1795857458,
+        "narHash": "sha256-sjxT29kJwtG00Dvqh/cJTJqZ44OrwZ1chNeYgr2XZHQ=",
         "owner": "tomet-lang",
         "repo": "sisho-board",
-        "rev": "c4bd7d4405d1ec002f09ae76197f289034034876",
+        "rev": "940b4f8b228e856221321c98bc85c158dff23da1",
         "type": "github"
       },
       "original": {
@@ -930,11 +930,11 @@
         "twrit": []
       },
       "locked": {
-        "lastModified": 1795813157,
-        "narHash": "sha256-3BLgltLh2+MEfbRPrnZR15GoDMAiu76yd91n4RXLWMY=",
+        "lastModified": 1795857468,
+        "narHash": "sha256-bu6NPIc3FTUOm5pGDG7a9fbvqDc+kaW+0uRVyB72bEA=",
         "owner": "tomet-lang",
         "repo": "sisho-desk",
-        "rev": "5fcbcf48c1fa2681a63fda12f78b672feb1c81e3",
+        "rev": "bd8784e91fdce5b53a1dd7380ca1f8b110c6ac73",
         "type": "github"
       },
       "original": {
