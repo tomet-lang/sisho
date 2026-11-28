@@ -66,6 +66,13 @@
       inputs.catasto.follows = "";
       inputs.sisho.follows = "";
     };
+    sisho-history = {
+      url = "github:tomet-lang/sisho-history";
+      inputs.tomet.follows = "";
+      inputs.twrit.follows = "";
+      inputs.catasto.follows = "";
+      inputs.sisho.follows = "";
+    };
     catasto = {
       url = "github:tomet-lang/fs-catasto";
       inputs.tomet.follows = "";

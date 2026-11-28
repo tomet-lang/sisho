@@ -9,6 +9,7 @@
   sisho-board,
   sisho-desk,
   sisho-audit,
+  sisho-history,
   ...
 }:
 let
@@ -32,6 +33,7 @@ mkShell {
     sisho-audit
     sisho-board
     sisho-desk
+    sisho-history
 
     just
 

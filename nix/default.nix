@@ -23,6 +23,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
       boardPkgs = inputs.sisho-board.packages.${system};
       deskPkgs = inputs.sisho-desk.packages.${system};
       auditPkgs = inputs.sisho-audit.packages.${system};
+      historyPkgs = inputs.sisho-history.packages.${system};
       catastoPkgs = inputs.catasto.packages.${system};
 
       # Several packages as one: the `bin/` of each in a single directory.
@@ -59,6 +60,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         inherit (boardPkgs) sisho-board;
         inherit (deskPkgs) sisho-desk;
         inherit (auditPkgs) sisho-audit;
+        inherit (historyPkgs) sisho-history;
 
         # Minimal starter bundle for newcomers and PKM beginners.
         starter = combine [
@@ -91,6 +93,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
           sisho-board
           sisho-desk
           sisho-audit
+          sisho-history
         ];
       };
 
@@ -106,6 +109,7 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         inherit (boardPkgs) sisho-board;
         inherit (deskPkgs) sisho-desk;
         inherit (auditPkgs) sisho-audit;
+        inherit (historyPkgs) sisho-history;
       };
 
       treefmt = import ./formatter.nix {
