@@ -33,7 +33,8 @@ Because `PATH` may contain untrusted or newly installed `sisho-<word>` binaries,
 ``    - Every key in `binaries` is the **canonicalized filesystem path** (`fs::canonicalize`) of the executable. Any binary path not present in `binaries` has trust state `untrusted`. Replacing a binary with one at a different canonical path (such as a new Nix store derivation or another directory on `PATH`) automatically resets its trust state to `untrusted`.
 `` 2. **Gatekeeper rules**:
 ``    - `sisho <word> ...` only executes an active `sisho-<word>` binary if its canonical path is marked `"allowed"` in `trust.json`.
-``    - If the binary is `untrusted` or `denied`, `sisho` **never executes it**. Instead, it prints:
+``    - If the binary is `untrusted` and both standard input and standard error are interactive terminals, `sisho` displays the path (and canonical path when different) on standard error and prompts `Allow and run it? [y/N]: `. Answering `y` or `yes` records `"allowed"` in `trust.json` and executes the binary.
+``    - If the binary is `denied`, `untrusted` in a non-interactive context, or the user declines the prompt, `sisho` **never executes it**. Instead, it prints:
 ``      `sisho: extension '<word>' (<canonical_path>) is not trusted (<untrusted|denied>); run 'sisho --allow <word>' to allow it`
 ``      to standard error and exits with `126`.
 ``    - `sisho --list -v` (and `sisho --list -v --json`) only executes `--sisho-extension-info` on active extensions whose trust state is `allowed`. It never runs `--sisho-extension-info` on `untrusted` or `denied` binaries.
